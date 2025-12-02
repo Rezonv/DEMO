@@ -237,7 +237,7 @@ const StoryReader: React.FC<Props> = ({
               <h1 className="text-base font-bold text-white leading-none mb-1.5">{character.name}</h1>
 
               {/* 5-Tier Affection Bar */}
-              <div className="flex flex-col gap-0.5">
+              <div className="flex flex-col gap-0.5 relative group/edit">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wide">
                   <span className={`${affState.tierColor}`}>{affState.tierName}</span>
                   <span className="text-gray-500">{Math.round(affState.percentage)}%</span>
@@ -251,23 +251,24 @@ const StoryReader: React.FC<Props> = ({
 
                 {/* Affection Edit Control */}
                 {isEditingAffection ? (
-                  <div className="absolute top-8 left-0 bg-gray-800 p-2 rounded border border-gray-600 flex gap-1 z-50 shadow-xl">
+                  <div className="absolute top-8 left-0 bg-gray-800 p-2 rounded border border-gray-600 flex gap-1 z-50 shadow-xl min-w-[150px]">
                     <input
                       type="number"
                       value={tempAffection}
                       onChange={(e) => setTempAffection(e.target.value)}
-                      className="w-16 bg-gray-900 text-white text-xs p-1 rounded border border-gray-700"
+                      className="flex-1 bg-gray-900 text-white text-xs p-1 rounded border border-gray-700"
+                      autoFocus
                     />
-                    <button onClick={handleAffectionUpdate} className="text-green-400 hover:text-green-300 px-1">✓</button>
-                    <button onClick={() => setIsEditingAffection(false)} className="text-red-400 hover:text-red-300 px-1">✕</button>
+                    <button onClick={handleAffectionUpdate} className="bg-green-600 hover:bg-green-500 text-white px-2 rounded text-xs">OK</button>
+                    <button onClick={() => setIsEditingAffection(false)} className="bg-red-600 hover:bg-red-500 text-white px-2 rounded text-xs">X</button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setIsEditingAffection(true)}
-                    className="absolute -right-8 top-0 text-gray-400 hover:text-pink-400 transition-colors p-1"
+                    className="absolute -right-6 -top-1 p-1.5 bg-gray-800 hover:bg-pink-600 text-gray-400 hover:text-white rounded-full border border-gray-600 hover:border-pink-400 transition-all shadow-lg z-20"
                     title="修改好感度"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </button>
