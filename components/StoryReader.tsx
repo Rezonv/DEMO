@@ -265,9 +265,10 @@ const StoryReader: React.FC<Props> = ({
                 ) : (
                   <button
                     onClick={() => setIsEditingAffection(true)}
-                    className="absolute -right-6 -top-1 p-1.5 bg-gray-800 hover:bg-pink-600 text-gray-400 hover:text-white rounded-full border border-gray-600 hover:border-pink-400 transition-all shadow-lg z-20"
+                    className="absolute -right-10 -top-2 px-2 py-1 bg-pink-600 hover:bg-pink-500 text-white rounded-full border border-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.5)] z-50 flex items-center gap-1 animate-pulse"
                     title="修改好感度"
                   >
+                    <span className="text-[10px] font-bold">修改</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
