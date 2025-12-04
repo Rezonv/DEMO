@@ -23,7 +23,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       'process.env.API_KEY': JSON.stringify(apiKey),
-      'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
+      'process.env.GEMINI_API_KEY': JSON.stringify(apiKey),
+      'process.env.RUNPOD_API_KEY': JSON.stringify(env.RUNPOD_API_KEY || env.VITE_RUNPOD_API_KEY || '')
     },
     resolve: {
       alias: {

@@ -17,16 +17,21 @@ import { SHOP_ITEMS } from '../data/items';
 import { FACILITIES } from '../data/facilities';
 
 const DEFAULT_IMAGE_SETTINGS: ImageGenerationSettings = {
-    provider: 'novelai',
-    customUrl: 'http://127.0.0.1:7860',
-    generationMode: 'quality'
+    provider: 'runpod',
+    customUrl: '',
+    customApiKey: '',
+    generationMode: 'quality',
+    runpodLoraStrength: 1.0
 };
 
 const DEFAULT_TEXT_SETTINGS: TextGenerationSettings = {
-    provider: 'gemini',
-    customBaseUrl: 'http://127.0.0.1:1234/v1',
-    customModelName: 'local-model'
+    provider: 'custom',
+    customBaseUrl: 'https://openrouter.ai/api/v1',
+    customApiKey: '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',
+    customModelName: 'google/gemini-2.0-flash-exp:free'
 };
+
+
 
 const DEFAULT_STATISTICS: UserStatistics = {
     totalLogins: 1,
@@ -229,10 +234,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setItemImages(await getAllItemImagesFromDB());
 
                 const loadedSettings = await getGameData<ImageGenerationSettings>('image_settings');
-                if (loadedSettings) setImageSettings(loadedSettings);
+                if (loadedSettings) {
+
+                    setImageSettings(loadedSettings);
+                } else {
+                    setImageSettings(DEFAULT_IMAGE_SETTINGS);
+                }
 
                 const loadedTextSettings = await getGameData<TextGenerationSettings>('text_settings');
-                if (loadedTextSettings) setTextSettings(loadedTextSettings);
+                if (loadedTextSettings) {
+                    // FORCE MIGRATION: Switch to Grok 4.1 Fast Free if currently using Gemini OR other models
+                    if (loadedTextSettings.provider === 'gemini' ||
+                        loadedTextSettings.customModelName?.includes('google/gemini')) {
+
+                        console.log("Migrating Text Settings to Grok 4.1 Fast Free...");
+                        setTextSettings(DEFAULT_TEXT_SETTINGS);
+                    } else {
+                        setTextSettings(loadedTextSettings);
+                    }
+                } else {
+                    setTextSettings(DEFAULT_TEXT_SETTINGS);
+                }
 
                 // Load LoRAs
                 const loadedLoras = await getGameData<{ [key: string]: string }>('custom_loras');

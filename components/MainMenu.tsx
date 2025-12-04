@@ -115,7 +115,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onNavigate, assistantUrl, onChangeA
                 {/* Bottom Section: Mission, Base, Depot */}
                 <div className="flex w-full justify-end gap-4 h-1/5">
                     <SmallMenuButton label="任務 (LOCKED)" icon={<ClipboardList className="w-6 h-6" />} onClick={() => { }} delay="0.8s" disabled />
-                    <SmallMenuButton label="基建 (BASE)" icon={<Home className="w-6 h-6" />} onClick={() => onNavigate('dream_home')} delay="0.85s" />
+                    {/* <SmallMenuButton label="基建 (BASE)" icon={<Home className="w-6 h-6" />} onClick={() => onNavigate('dream_home')} delay="0.85s" /> */}
                     <SmallMenuButton label="倉庫 (LOCKED)" icon={<Box className="w-6 h-6" />} onClick={() => { }} delay="0.9s" disabled />
                     <SmallMenuButton label="收藏 (COLLECTION)" icon={<Terminal className="w-6 h-6" />} onClick={() => onNavigate('library')} delay="0.95s" />
                 </div>

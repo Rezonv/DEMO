@@ -13,11 +13,13 @@ export interface Character {
   fetishes: string[];
   avatarUrl: string;
   portraitUrl?: string;
+  loraName?: string;
+  loraStrength?: number;
+  loraTrigger?: string; // New: Specific tags for character resemblance (e.g., Danbooru tags)
   defaultRole: string;
   isCustom?: boolean;
   dashboardImageUrl?: string;
   ultImageUrl?: string;
-  loraTrigger?: string; // New: Specific tags for character resemblance (e.g., Danbooru tags)
 
   // Combat & Expedition
   passiveSkill?: PassiveSkill;
@@ -559,9 +561,15 @@ export interface SkillConfig {
 }
 
 export interface ImageGenerationSettings {
-  provider: 'gemini' | 'custom' | 'novelai';
+  provider: 'gemini' | 'custom' | 'novelai' | 'runpod';
   customUrl: string;
+  customApiKey?: string;
+  customModelName?: string;
   novelaiApiKey?: string;
+  runpodEndpointId?: string; // New: RunPod Endpoint ID
+  runpodApiKey?: string;     // New: RunPod API Key
+  runpodLoraName?: string;   // New: LoRA Filename (.safetensors)
+  runpodLoraStrength?: number; // New: LoRA Strength (0.1 - 1.0)
   novelaiUseReference?: boolean; // New: Use avatar as Img2Img reference
   novelaiStrength?: number; // New: Img2Img strength (0.1 - 0.99) // New: NovelAI API Key
   generationMode: 'quality' | 'speed'; // New: Control generation speed/quality

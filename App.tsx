@@ -163,7 +163,7 @@ const AppContent = () => {
         setSegments(prev => [...prev, { id: uuid(), text: `(贈送了 ${item.name})`, isUserChoice: true }]);
         trackStat('giftsSent', 1);
         try {
-            const reaction = await generateGiftReaction(selectedCharacter, item, newAff, textSettings);
+            const reaction = await generateGiftReaction(selectedCharacter, item, newAff);
             setSegments(prev => [...prev, { id: uuid(), text: reaction, isUserChoice: false, affectionChange: item.baseAffection, affectionSource: `贈送 ${item.name}` }]);
         } catch (e) { console.error(e); } finally { setAppState(AppState.WAITING_FOR_INPUT); }
     };
@@ -179,7 +179,7 @@ const AppContent = () => {
             const memories = memoriesMap[char.id] || [];
             const result = await generateStorySegment(char, memoryRole, scene, [], null, currentAff, false, textSettings, memories);
             setAppState(AppState.GENERATING_IMAGE);
-            const img = await generateCharacterImage(char, result.text, customAvatars[char.id], imageSettings);
+            const img = await generateCharacterImage(char, result.text, customAvatars[char.id], imageSettings, undefined, undefined, currentAff);
             const newSegment: StorySegment = { id: uuid(), text: result.text, imageUrl: img || undefined, isUserChoice: false, isFavorited: true };
             setSegments([newSegment]);
             const memoryStory: SavedStory = { id: newStoryId, title: `【回憶】${char.name} - ${scene.atmosphere}`, date: new Date().toISOString(), characterName: char.name, segments: [newSegment], finalAffection: currentAff };
@@ -198,8 +198,10 @@ const AppContent = () => {
             console.log("Generating image for segment:", segmentId);
             const loraTag = customLoras[targetChar.id]; // Get LoRA tag
             const loraTrigger = customLoraTriggers[targetChar.id]; // Get LoRA Trigger
-            const imgBase64 = await generateCharacterImage(targetChar, prompt, customAvatars[targetChar.id], imageSettings, loraTag, loraTrigger);
+            const imgBase64 = await generateCharacterImage(targetChar, prompt, customAvatars[targetChar.id], imageSettings, loraTag, loraTrigger, affectionMap[targetChar.id] || 50);
             if (imgBase64) {
+                console.log("Image URL received:", imgBase64);
+                // alert("Debug: Image URL received: " + imgBase64); // Temporary Debug Removed
                 setSegments(prev => prev.map(s => s.id === segmentId ? { ...s, imageUrl: imgBase64 } : s));
             } else {
                 alert("圖片生成失敗，請檢查 API Key 或後端設定。");
@@ -381,7 +383,7 @@ const AppContent = () => {
                             favorites={favorites}
                             toggleFavorite={(id) => setFavorites(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
                             customAvatars={customAvatars}
-                            onGenerateAvatar={async (char) => { setIsGeneratingAvatar(true); try { const img = await generateCharacterImage(char, "Portrait", undefined, imageSettings); if (img) await updateAvatar(char.id, img); } finally { setIsGeneratingAvatar(false); } }}
+                            onGenerateAvatar={async (char) => { setIsGeneratingAvatar(true); try { const img = await generateCharacterImage(char, "Portrait", undefined, imageSettings, undefined, undefined, affectionMap[char.id] || 0); if (img) await updateAvatar(char.id, img); } finally { setIsGeneratingAvatar(false); } }}
                             onUploadAvatar={(id, file) => { const reader = new FileReader(); reader.onload = async (e) => { if (e.target?.result) await updateAvatar(id, e.target!.result as string) }; reader.readAsDataURL(file); }}
                             isGeneratingAvatar={isGeneratingAvatar}
                             onAddCustomCharacter={addCustomCharacter}
@@ -436,7 +438,7 @@ const AppContent = () => {
                     {view === 'library' && <Library library={library} onLoadStory={(story) => { const foundChar = mergedCharacters.find((c: any) => c.name === story.characterName) || CHARACTERS[0]; setSelectedCharacter(foundChar); setSegments(story.segments); setCurrentStoryId(story.id); if (story.title.includes('【回憶】')) { setView('memory'); } else { updateAffection(foundChar.id, story.finalAffection); setCurrentOptions([{ label: "繼續", action: "continue" }]); setView('story'); } }} onDeleteStory={(id) => setLibrary(prev => prev.filter(s => s.id !== id))} onBack={() => setView('home')} />}
                     {view === 'story' && selectedCharacter && <StoryReader character={selectedCharacter} segments={segments} currentOptions={currentOptions} appState={appState} customAvatar={customAvatars[selectedCharacter.id]} generatingSegmentId={generatingSegmentId} onOptionSelect={handleOptionSelect} onGenerateImage={handleGenerateImage} onEditImage={handleEditImage} onGenerateVideo={() => { }} onToggleFavorite={(segId) => setSegments(prev => prev.map(s => s.id === segId ? { ...s, isFavorited: !s.isFavorited } : s))} onSave={() => { const storyData: SavedStory = { id: currentStoryId || uuid(), title: `${selectedCharacter.name} - ${sceneContext.location}`, date: new Date().toISOString(), characterName: selectedCharacter.name, segments: segments, finalAffection: affectionMap[selectedCharacter.id] || 50 }; const existingIdx = library.findIndex(s => s.id === storyData.id); if (existingIdx >= 0) { const newLib = [...library]; newLib[existingIdx] = storyData; setLibrary(newLib); } else { setLibrary([storyData, ...library]); } alert("進度已保存"); }} onBack={() => setView('home')} currentAffection={currentStoryAffection} inventory={inventory} onOpenShop={() => setView('shop')} onSendGift={handleSendGift} onUploadUserImage={handleUserImageUpload} onUpdateAffection={(val) => updateAffection(selectedCharacter.id, val)} />}
                     {view === 'memory' && selectedCharacter && <MemoryReader character={selectedCharacter} segment={segments[0]} isGenerating={appState === AppState.GENERATING_TEXT || appState === AppState.GENERATING_IMAGE} onBack={() => setView('home')} />}
-                    {view === 'scene_setup' && selectedCharacter && <SceneSetup character={selectedCharacter} userRole={userRole} customAvatar={customAvatars[selectedCharacter.id]} onUserRoleChange={setUserRole} onStart={handleSceneStart} onBack={() => setView('character_select')} currentAffection={affectionMap[selectedCharacter.id] || 0} isGeneratingStory={appState === AppState.GENERATING_TEXT} />}
+                    {view === 'scene_setup' && selectedCharacter && <SceneSetup character={selectedCharacter} userRole={userRole} customAvatar={customAvatars[selectedCharacter.id]} onUserRoleChange={setUserRole} onStart={handleSceneStart} onBack={() => setView('character_select')} currentAffection={affectionMap[selectedCharacter.id] || 0} isGeneratingStory={appState === AppState.GENERATING_TEXT} textSettings={textSettings} />}
                     {view === 'dream_home' && <DreamHome homeState={homeState} characters={ownedCharacters} credits={credits} inventory={inventory} affectionMap={affectionMap} customAvatars={customAvatars} activeEvents={activeEvents} focusedEventId={focusedEventId} onClearFocusedEvent={() => setFocusedEventId(null)} onUpdateHomeState={setHomeState} onUpdateCredits={setCredits} onUpdateAffection={updateAffection} onUpdateInventory={setInventory} onResolveEvent={(id) => setActiveEvents(prev => prev.filter(e => e.id !== id))} onBack={() => setView('home')} imageSettings={imageSettings} textSettings={textSettings} diariesMap={diariesMap} addDiaryEntry={addDiaryEntry} addMemory={addMemory} />}
                     {view === 'expedition' && <ExpeditionCenter characters={ownedCharacters} activeExpeditions={activeExpeditions} customAvatars={customAvatars} inventory={inventory} credits={credits} homeState={homeState} onStartExpedition={(mapId, charIds, equipId) => { const newExp: ActiveExpedition = { id: uuid(), mapId, characterIds: charIds, startTime: Date.now(), endTime: Date.now() + (EXPEDITION_MAPS.find(m => m.id === mapId)?.durationMinutes || 60) * 60 * 1000, claimed: false, usedEquipmentId: equipId, bonusCreditMult: 1, bonusAffectionMult: 1 }; setActiveExpeditions(prev => [...prev, newExp]); setCredits(prev => prev - (EXPEDITION_MAPS.find(m => m.id === mapId)?.ticketCost || 0)); }} onClaimExpedition={(id, log, cred, aff, mats, rare) => { setActiveExpeditions(prev => prev.filter(e => e.id !== id)); setCredits(prev => prev + cred); const exp = activeExpeditions.find(e => e.id === id); if (exp) { exp.characterIds.forEach(cid => updateAffection(cid, (affectionMap[cid] || 0) + aff)); } if (mats.length > 0 || rare) { setInventory(prev => { let newInv = [...prev]; mats.forEach(m => { const exist = newInv.find(i => i.id === m.id); if (exist) exist.count += m.count; else newInv.push(m); }); if (rare) { const exist = newInv.find(i => i.id === rare.id); if (exist) exist.count += 1; else newInv.push({ ...rare, count: 1 }); } return newInv; }); } trackStat('expeditionsCompleted', 1); }} onBack={() => setView('home')} />}
                     {view === 'gacha' && <GachaSystem credits={credits} starJade={userState.starJade} onSpendCredits={(amt) => setCredits(prev => prev - amt)} onSpendStarJade={(amt) => setUserState(prev => ({ ...prev, starJade: prev.starJade - amt }))} onAddItem={handleGachaAdd} onAddCharacter={handleCharacterGet} onBack={() => handleEnterApp()} allCharacters={mergedCharacters} isTutorial={userState.ownedCharacterIds.length === 0} trackStat={trackStat} />}
