@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e # Exit immediately if a command exits with a non-zero status.
 
-# Define User Agent to bypass Civitai blocking
+# Define User Agent
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+
+# API Token (Will be replaced or set via ENV)
+# If you have a token, replace "YOUR_TOKEN_HERE" or set CIVITAI_API_TOKEN env var
+TOKEN="585e567a54b65bc9ac77d13688f743e8"
 
 # Create directories
 mkdir -p /comfyui/models/checkpoints
@@ -13,14 +17,30 @@ wget --header="User-Agent: $USER_AGENT" -O /comfyui/models/checkpoints/pony_v6_x
 
 echo "Downloading LoRAs..."
 
-# Function to download with retry and validation
+# Function to download with retry, validation, and token support
 download_lora() {
     url=$1
     filename=$2
     filepath="/comfyui/models/loras/$filename"
     
+    # Append token if available
+    if [ -n "$TOKEN" ]; then
+        if [[ "$url" == *"?"* ]]; then
+            url="${url}&token=${TOKEN}"
+        else
+            url="${url}?token=${TOKEN}"
+        fi
+    fi
+    
     echo "Downloading $filename..."
-    wget --header="User-Agent: $USER_AGENT" -O "$filepath" "$url"
+    # Use curl for better handling of redirects and headers with token
+    # -L: Follow redirects
+    # -f: Fail silently on server errors (403/404) so we can catch it
+    # -H: User-Agent
+    curl -L -f -H "User-Agent: $USER_AGENT" -o "$filepath" "$url" || {
+        echo "ERROR: Failed to download $filename (curl exit code $?)"
+        exit 1
+    }
     
     # Validation 1: Check file size (must be > 10KB)
     filesize=$(stat -c%s "$filepath")
@@ -31,7 +51,6 @@ download_lora() {
     fi
 
     # Validation 2: Check for HTML content (Civitai error pages)
-    # We check the first few lines for common HTML tags
     if head -n 10 "$filepath" | grep -qEi "<!DOCTYPE|html|body|Cloudflare"; then
         echo "ERROR: File $filename appears to be an HTML page (likely 403 Forbidden)."
         echo "First 10 lines of content:"
