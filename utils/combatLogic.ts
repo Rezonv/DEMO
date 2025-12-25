@@ -2,6 +2,7 @@
 import { InventoryItem, ShopItem, CombatUnit, RaidMap, DailyStage } from '../types';
 import { SHOP_ITEMS } from '../data/items';
 import { CombatMetrics } from '../components/BattleEngine';
+import { APP_CONFIG } from '../appConfig';
 
 // --- MVP Calculation ---
 export interface MvpResult {
@@ -14,7 +15,7 @@ export interface MvpResult {
 }
 
 export const calculateMVP = (
-    allies: CombatUnit[], 
+    allies: CombatUnit[],
     metrics: Record<string, CombatMetrics>
 ): MvpResult | null => {
     let maxScore = -1;
@@ -23,10 +24,10 @@ export const calculateMVP = (
     // Filter out summons from MVP consideration usually
     allies.filter(u => !u.isSummon).forEach(ally => {
         const m = metrics[ally.uid] || { damageDealt: 0, healingDone: 0, shieldProvided: 0, damageTaken: 0 };
-        
+
         // MVP Score Formula: Dmg + Heal*1.5 + Shield + Taken*0.5
         const score = m.damageDealt + (m.healingDone * 1.5) + (m.shieldProvided || 0) + ((m.damageTaken || 0) * 0.5);
-        
+
         if (score > maxScore) {
             maxScore = score;
             mvpData = {
@@ -63,7 +64,7 @@ export const calculateDrops = (
         if (source.type === 'DAILY' && source.daily && source.dailyDiffIndex !== undefined) {
             const diff = source.daily.difficulties[source.dailyDiffIndex];
             totalExp += diff.level * 100;
-            
+
             if (source.daily.type === 'CREDITS') totalCredits += 10000 * diff.level;
             else totalCredits += 100 * diff.level;
 
@@ -72,29 +73,29 @@ export const calculateDrops = (
                     const item = SHOP_ITEMS.find(x => x.id === r.itemId);
                     if (item) {
                         const qty = Math.floor(Math.random() * (r.max - r.min + 1)) + r.min;
-                        if(qty > 0) pushDrop(allDrops, item, qty);
+                        if (qty > 0) pushDrop(allDrops, item, qty);
                     }
                 }
             });
-        } 
+        }
         // 2. RAID MAP LOGIC
         else if (source.type === 'RAID' && source.map) {
             const map = source.map;
-            
+
             // Logic: Raid maps have drop tables. We simulate clearing nodes (Combat + Boss).
             // Approx 3 combat encounters + 1 boss per full run.
-            const rollsPerRun = 4; 
-            
-            for(let r=0; r<rollsPerRun; r++) {
+            const rollsPerRun = 4;
+
+            for (let r = 0; r < rollsPerRun; r++) {
                 map.dropTable?.forEach(d => {
                     // Increase drop chance for the "Boss" roll (last one)
                     const chanceMult = r === rollsPerRun - 1 ? 2.0 : 1.0;
-                    
+
                     if (Math.random() <= (d.chance * chanceMult)) {
                         const item = SHOP_ITEMS.find(x => x.id === d.itemId);
                         if (item) {
                             const qty = Math.floor(Math.random() * (d.max - d.min + 1)) + d.min;
-                            if(qty > 0) pushDrop(allDrops, item, qty);
+                            if (qty > 0) pushDrop(allDrops, item, qty);
                         }
                     }
                 });

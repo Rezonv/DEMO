@@ -49,23 +49,23 @@ const MainMenu: React.FC<MainMenuProps> = ({ onNavigate, assistantUrl, onChangeA
 
                 {/* Upper Section: Terminal & Status */}
                 <div className="flex w-full justify-end gap-4 mb-4 h-1/3 animate-slide-in-right" style={{ animationDelay: '0.2s' }}>
-                    {/* Terminal (Combat) - DISABLED FOR DEMO */}
+                    {/* Terminal (Combat) */}
                     <button
-                        disabled
-                        className="w-2/3 h-full bg-black/40 backdrop-blur-md border-t-2 border-r-2 border-gray-600 relative group overflow-hidden shadow-2xl clip-path-polygon opacity-50 cursor-not-allowed"
+                        onClick={() => onNavigate('combat_zone')}
+                        className="w-2/3 h-full bg-black/40 backdrop-blur-md border-t-2 border-r-2 border-[var(--ak-accent-cyan)] relative group overflow-hidden shadow-2xl clip-path-polygon"
                         style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 20px 100%, 0 calc(100% - 20px))' }}
                     >
                         {/* Content */}
-                        <div className="absolute top-6 right-8 text-right z-10">
-                            <div className="text-7xl font-black italic text-gray-500 tracking-tighter">作戰</div>
-                            <div className="text-2xl font-bold text-gray-600 tracking-[0.8em] mt-2">LOCKED</div>
+                        <div className="absolute top-6 right-8 text-right z-10 transition-transform group-hover:-translate-x-2">
+                            <div className="text-7xl font-black italic text-white/50 group-hover:text-white tracking-tighter">作戰</div>
+                            <div className="text-2xl font-bold text-[var(--ak-accent-cyan)] tracking-[0.8em] mt-2 group-hover:tracking-[1em] transition-all">TERMINAL</div>
                             <div className="flex items-center justify-end gap-2 mt-6">
-                                <span className="text-gray-500 font-mono text-sm tracking-widest">DEMO VERSION</span>
+                                <span className="text-[var(--ak-accent-cyan)] font-mono text-xs tracking-widest bg-[var(--ak-accent-cyan)]/10 px-2 py-1">AVAILABLE NOW</span>
                             </div>
                         </div>
 
                         {/* Icon */}
-                        <Sword className="absolute bottom-6 left-10 w-32 h-32 text-white/5" />
+                        <Sword className="absolute bottom-6 left-10 w-32 h-32 text-white/10 group-hover:scale-110 group-hover:rotate-12 transition-all" />
                     </button>
                 </div>
 
@@ -81,8 +81,8 @@ const MainMenu: React.FC<MainMenuProps> = ({ onNavigate, assistantUrl, onChangeA
                     <MenuButton
                         label="幹員" subLabel="OPERATORS"
                         icon={<Users className="w-8 h-8" />}
-                        onClick={() => { }} // Disabled
-                        className="flex-1 border-l-2 border-white/10 opacity-50 cursor-not-allowed grayscale"
+                        onClick={() => onNavigate('character_management')}
+                        className="flex-1 border-l-2 border-white/20 hover:border-[var(--ak-accent-yellow)]"
                         delay="0.4s"
                     />
                 </div>
@@ -92,31 +92,32 @@ const MainMenu: React.FC<MainMenuProps> = ({ onNavigate, assistantUrl, onChangeA
                     <MenuButton
                         label="採購" subLabel="STORE"
                         icon={<ShoppingBag className="w-8 h-8" />}
-                        onClick={() => { }} // Disabled
-                        className="flex-1 border-b-2 border-white/10 opacity-50 cursor-not-allowed grayscale"
+                        onClick={() => onNavigate('shop')}
+                        className="flex-1 border-b-2 border-white/10 hover:border-[var(--ak-accent-cyan)]"
                         delay="0.5s"
                     />
                     <MenuButton
                         label="招募" subLabel="RECRUIT"
                         icon={<Briefcase className="w-8 h-8" />}
-                        onClick={() => { }} // Disabled
-                        className="flex-1 border-b-2 border-white/10 opacity-50 cursor-not-allowed grayscale"
+                        onClick={() => onNavigate('gacha')}
+                        className="flex-1 border-b-2 border-white/10 hover:border-[var(--ak-accent-cyan)]"
                         delay="0.6s"
                     />
                     <MenuButton
                         label="尋訪" subLabel="HEADHUNT"
                         icon={<Search className="w-8 h-8" />}
-                        onClick={() => { }} // Disabled
-                        className="flex-1 bg-gray-800/80 text-gray-400 border-b-2 border-gray-700 opacity-50 cursor-not-allowed"
+                        onClick={() => onNavigate('gacha')}
+                        className="flex-1 bg-[var(--ak-accent-yellow)]/10 text-white border-b-2 border-[var(--ak-accent-yellow)]"
                         delay="0.7s"
+                        highlight
                     />
                 </div>
 
                 {/* Bottom Section: Mission, Base, Depot */}
                 <div className="flex w-full justify-end gap-4 h-1/5">
-                    <SmallMenuButton label="任務 (LOCKED)" icon={<ClipboardList className="w-6 h-6" />} onClick={() => { }} delay="0.8s" disabled />
-                    {/* <SmallMenuButton label="基建 (BASE)" icon={<Home className="w-6 h-6" />} onClick={() => onNavigate('dream_home')} delay="0.85s" /> */}
-                    <SmallMenuButton label="倉庫 (LOCKED)" icon={<Box className="w-6 h-6" />} onClick={() => { }} delay="0.9s" disabled />
+                    <SmallMenuButton label="任務 (MEMBER)" icon={<ClipboardList className="w-6 h-6" />} onClick={() => onNavigate('expedition')} delay="0.8s" />
+                    <SmallMenuButton label="基建 (BASE)" icon={<Home className="w-6 h-6" />} onClick={() => onNavigate('dream_home')} delay="0.85s" />
+                    <SmallMenuButton label="倉庫 (DEPOT)" icon={<Box className="w-6 h-6" />} onClick={() => onNavigate('inventory')} delay="0.9s" />
                     <SmallMenuButton label="收藏 (COLLECTION)" icon={<Terminal className="w-6 h-6" />} onClick={() => onNavigate('library')} delay="0.95s" />
                 </div>
 

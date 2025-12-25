@@ -17,7 +17,11 @@ export const CHARS_HSR_PENACONY: Character[] = [
     portraitUrl: '/characters/hsr/blackswan/portrait.png',
     defaultRole: '記憶守護者',
     passiveSkill: { name: '命運占卜', description: '預知危險與機遇，探險積分獎勵增加 15%。', effectType: 'boost_credits', value: 0.15 },
-    loraTrigger: 'black_swan_(honkai:_star_rail), purple_hair, veil, tarot, dress, cleavage'
+    loraTrigger: 'black swan (honkai: star rail), purple hair, veil, tarot, dress, cleavage, jewelry, navel',
+    relationships: [
+      { characterId: 'sparkle', type: 'Uneasy Alliance', description: 'Finds her unpredictable and dangerous, but respects her ability to disrupt the script.' },
+      { characterId: 'acheron', type: 'Observer', description: 'Intrigued by her lack of past and the Nihility she carries. Wants to see her memories.' }
+    ]
   },
   {
     id: 'sparkle',
@@ -34,7 +38,10 @@ export const CHARS_HSR_PENACONY: Character[] = [
     portraitUrl: '/characters/hsr/sparkle/portrait.png',
     defaultRole: '假面愚者',
     passiveSkill: { name: '千面幻戲', description: '以假亂真，好感度獲取提升 15%。', effectType: 'boost_affection', value: 0.15 },
-    loraTrigger: 'sparkle_(honkai:_star_rail), twintails, mask, kimono, red_eyes, fox_mask'
+    loraTrigger: 'sparkle_(honkai:_star_rail), twintails, mask, kimono, red_eyes, fox_mask',
+    relationships: [
+      { characterId: 'blackswan', type: 'Toy', description: 'Thinks the Memokeeper is too serious. Loves to tease her and mess with her divinations.' }
+    ]
   },
   {
     id: 'acheron',
@@ -85,7 +92,7 @@ export const CHARS_HSR_PENACONY: Character[] = [
     portraitUrl: '/characters/hsr/jade/portrait.png',
     defaultRole: '戰略投資部P45',
     passiveSkill: { name: '高利貸', description: '高風險高回報，探險積分獎勵增加 20%。', effectType: 'boost_credits', value: 0.2 },
-    loraTrigger: 'jade_(honkai:_star_rail), purple_hair, hat, whip, purple_dress, snake'
+    loraTrigger: 'jade (honkai: star rail), purple hair, hat, whip, purple dress, snake, black gloves'
   },
   {
     id: 'firefly',

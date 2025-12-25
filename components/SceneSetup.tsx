@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SceneContext, Character, TextGenerationSettings } from '../types';
-import { generateRandomScene } from '../services/geminiService';
+import { generateRandomSceneAI } from '../services/geminiService';
 
 interface Props {
   character: Character;
@@ -58,13 +58,39 @@ const SceneSetup: React.FC<Props> = ({ character, userRole, customAvatar, onUser
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // --- Static Scene Templates (No AI Required) ---
+  const SCENE_TEMPLATES = {
+    random: {
+      locations: ['午後的咖啡廳', '陽光明媚的公園', '安靜的圖書館', '熙攘的街角', '學校的頂樓', '便利商店', '擁擠的捷運車廂'],
+      times: ['放學後', '週末早晨', '平凡的午後', '黃昏時分'],
+      atmospheres: ['輕鬆', '悠閒', '熱鬧', '平靜', '有些尷尬', '溫馨']
+    },
+    date: {
+      locations: ['深夜的水族館', '情侶座電影院', '燭光晚餐餐廳', '夜晚的海邊', '遊樂園的摩天輪', '煙火大會', '溫泉旅行'],
+      times: ['情人節夜晚', '聖誕夜', '交往紀念日', '星空下'],
+      atmospheres: ['浪漫', '甜蜜', '害羞', '心動', '深情', '夢幻']
+    },
+    sex: {
+      locations: ['你的臥室', '上鎖的保健室', '深夜的辦公室', '無人的更衣室', '暴雨夜的旅館', '浴室'],
+      times: ['深夜 2 點', '暴雨的夜晚', '無人打擾的午後', '凌晨'],
+      atmospheres: ['曖昧', '燥熱', '禁忌', '渴望', '意亂情迷', '危險']
+    }
+  };
+
   const handleRandomize = async (type: 'random' | 'date' | 'sex') => {
+    if (!textSettings) {
+      // Fallback or Alert if settings missing
+      console.error("No text settings available for scene generation");
+      return;
+    }
+
     setIsGenerating(true);
+
     try {
-      const randomScene = await generateRandomScene(type, textSettings);
-      setScene(randomScene);
-    } catch (error) {
-      alert("生成場景失敗 (Generation Failed)");
+      const generatedScene = await generateRandomSceneAI(character, type, textSettings);
+      setScene(generatedScene);
+    } catch (e) {
+      console.error("Scene generation error", e);
     } finally {
       setIsGenerating(false);
     }

@@ -16,6 +16,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/aglaea/avatar.png',
     portraitUrl: '/characters/hsr/aglaea/portrait.png',
     defaultRole: '黃金之裔 • 裁縫',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'aglaea (honkai: star rail), blonde hair, blue-green eyes, white dress, greek clothes, laurel wreath, golden ornaments, jewelry, hair ornament, cleavage, navel, thigh strap',
     passiveSkill: { name: '黃金律法', description: '高貴的氣場令物價臣服，探險積分獎勵增加 30%。', effectType: 'boost_credits', value: 0.3 }
   },
   {
@@ -32,6 +34,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/castorice/avatar.png',
     portraitUrl: '/characters/hsr/castorice/portrait.png',
     defaultRole: '流光憶者',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'castorice (honkai: star rail), black hair, red streaks, gothic dress, red eyes, crazy eyes, yandere, black gloves, choker',
     passiveSkill: { name: '記憶回溯', description: '重現過去的榮光，探險稀有掉落率增加 15%。', effectType: 'boost_credits', value: 0.15 }
   },
   {
@@ -48,6 +52,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/tribbie/avatar.png',
     portraitUrl: '/characters/hsr/tribbie/portrait.png',
     defaultRole: '星空預言家',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'tribbie (honkai: star rail), pink hair, twintails, colorful dress, floating objects, cute, energetic, heterochromia',
     passiveSkill: { name: '幸運星', description: '天選之人的運氣，好感度獲取提升 20%。', effectType: 'boost_affection', value: 0.2 }
   },
   {
@@ -64,6 +70,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/haiseyin/avatar.png',
     portraitUrl: '/characters/hsr/haiseyin/portrait.png',
     defaultRole: '深海騎士統領',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'haiseyin (honkai: star rail), (siren:1.2), blue skin, scales, mermaid features, dark blue hair, wet skin, singing, fantasy armor',
     passiveSkill: { name: '海妖在歡唱', description: '歌聲魅惑人心，探險中遭遇敵人的機率降低。', effectType: 'rare_drop_boost', value: 0.1 }
   },
   {
@@ -80,6 +88,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/sapphire/avatar.png',
     portraitUrl: '/characters/hsr/sapphire/portrait.webp',
     defaultRole: '多洛斯俠盜',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'sapphire (honkai: star rail), phantom thief, mask, cape, black bodysuit, short hair, mischievous smile, holding card',
     passiveSkill: { name: '三百俠盜', description: '劫富濟貧，探險獲得的信用點增加 20%。', effectType: 'boost_credits', value: 0.2 }
   },
   {
@@ -96,6 +106,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/kelyudela/avatar.png',
     portraitUrl: '/characters/hsr/kelyudela/portrait.png',
     defaultRole: '燃冕獨裁官',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'kelyudela (honkai: star rail), (white hair:1.2), dark blue dress, elegant, small bat wings, crown, heavy eyeliner, holding staff, empress, authoritarian',
     passiveSkill: { name: '榮光屬於凱撒', description: '戰術指揮，探險失敗率大幅降低。', effectType: 'reduce_time', value: 0.15 }
   },
   {
@@ -112,6 +124,8 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     avatarUrl: '/characters/hsr/xilian/avatar.png',
     portraitUrl: '/characters/hsr/xilian/portrait.webp',
     defaultRole: '黃金裔 • 妖精',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'elysia (honkai: star rail), (similarity: pink hair), elf ears, pink eyes, white dress, long hair, hair ornament, gentle smile, magical atmosphere',
     passiveSkill: { name: '記憶漣漪', description: '美好的回憶，好感度獲取提升 20%。', effectType: 'boost_affection', value: 0.2 }
   },
   {
@@ -127,7 +141,12 @@ export const CHARS_HSR_AMPHOREUS: Character[] = [
     fetishes: ['護士服', '治癒系', '寵物情緣'],
     avatarUrl: '/characters/hsr/fengjin/avatar.png',
     portraitUrl: '/characters/hsr/fengjin/portrait.webp',
-    defaultRole: '翁法羅斯醫者',
-    passiveSkill: { name: '療癒晨曦', description: '溫柔的照料，探險後隊伍自動回復部分狀態。', effectType: 'reduce_time', value: 0.1 }
+    defaultRole: '搖光的醫師 | 黃金裔',
+    // Detailed Visual Tags for NoobAI/Pony
+    loraTrigger: 'hyacine (honkai: star rail), brown hair, ponytail, white robe, medical bag, soft smile, motherly',
+    passiveSkill: { name: '彩虹小馬的祝福', description: '小伊卡的治癒光環，戰鬥結束後大幅回復全隊生命值。', effectType: 'reduce_time', value: 0.2 },
+    // Personality Injection
+    dialogueStyle: 'Cheerful, Warm, Selfless, Professional Physician. Speaks with hope and kindness, often mentions "Little Ica" (her rainbow pony). Dedicated to "mending the dawn". Hides her own pain behind a smile.',
+    exampleDialogue: 'User: I am hurt. Char: 哎呀，別動別動！讓小伊卡來看看...痛痛飛走囉！(She smiles brightly, treating the wound with practiced ease) User: Who are you? Char: 我是雅辛忒絲，這是我的好夥伴小伊卡！我們是來為大家驅散黑暗的晨曦醫師喔！(The small rainbow pony neighs happily beside her)'
   }
 ];

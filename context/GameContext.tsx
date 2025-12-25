@@ -15,20 +15,32 @@ import { initDB, saveAvatarToDB, getAllAvatarsFromDB, saveDashboardImageToDB, sa
 import { CHARACTERS } from '../data/characters';
 import { SHOP_ITEMS } from '../data/items';
 import { FACILITIES } from '../data/facilities';
+import { APP_CONFIG } from '../appConfig'; // Import central config
 
 const DEFAULT_IMAGE_SETTINGS: ImageGenerationSettings = {
-    provider: 'runpod',
+    provider: 'runpod', // Default to RunPod (SaaS Mode)
     customUrl: '',
     customApiKey: '',
     generationMode: 'quality',
+
+    // EMBEDDED CREDENTIALS (SaaS Mode)
+    // Replace these with your deployed RunPod details
+    runpodEndpointId: import.meta.env.VITE_RUNPOD_ENDPOINT_ID || '', // Production Image Endpoint
+    runpodApiKey: import.meta.env.VITE_RUNPOD_API_KEY || '', // Production Key
     runpodLoraStrength: 1.0
 };
 
 const DEFAULT_TEXT_SETTINGS: TextGenerationSettings = {
-    provider: 'custom',
+    provider: 'runpod', // Default to RunPod (SaaS Mode)
     customBaseUrl: 'https://openrouter.ai/api/v1',
-    customApiKey: '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',
-    customModelName: 'google/gemini-2.0-flash-exp:free'
+    customApiKey: '',
+    customModelName: '',
+
+    // EMBEDDED CREDENTIALS (SaaS Mode)
+    // Replace these with your deployed RunPod details
+    runpodBaseUrl: '/runpod-proxy', // Local Proxy (Bypass CORS)
+    runpodApiKey: import.meta.env.VITE_RUNPOD_API_KEY || '', // Production Key
+    runpodModelName: 'magnum-v4-72b-awq' // Served Model Name (defined in Dockerfile)
 };
 
 
@@ -50,18 +62,48 @@ const generateAllUnlockedState = () => {
     const progression: Record<string, any> = {};
     const ids = CHARACTERS.map(c => c.id);
     ids.forEach(id => {
-        progression[id] = { level: 80, exp: 0, ascension: 6, unlockedTraces: [`${id}_core`] };
+        // 計算初始 maxExp
+        const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+        progression[id] = {
+            level: 80,
+            exp: 0,
+            maxExp: calculateMaxExp(80),
+            ascension: 6,
+            unlockedTraces: [`${id}_core`]
+        };
     });
     return { ids, progression };
 };
 
 const { ids: ALL_CHAR_IDS, progression: ALL_CHAR_PROGRESSION } = generateAllUnlockedState();
 
+// DEMO 模式初始角色設定
+// 修改為零角色開局，玩家需要通過抽卡獲得角色
+const DEMO_INITIAL_CHAR_IDS: string[] = APP_CONFIG.IS_DEMO_MODE ? [] : ALL_CHAR_IDS;
+
+// DEMO 模式初始角色進度（空對象，因為沒有初始角色）
+const DEMO_INITIAL_PROGRESSION: Record<string, any> = {};
+
+// 非 DEMO 模式的初始進度（所有角色滿級）
+if (!APP_CONFIG.IS_DEMO_MODE) {
+    ALL_CHAR_IDS.forEach(id => {
+        const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+        DEMO_INITIAL_PROGRESSION[id] = {
+            level: 80,
+            exp: 0,
+            maxExp: calculateMaxExp(80),
+            ascension: 6,
+            unlockedTraces: [`${id}_core`]
+        };
+    });
+}
+
 const DEFAULT_USER_STATE: UserState = {
     level: 60, exp: 0, maxExp: 100, stamina: 240, maxStamina: 240, lastStaminaRegen: Date.now(),
-    starJade: 16000, starlight: 0,
-    ownedCharacterIds: ALL_CHAR_IDS,
-    characterProgression: ALL_CHAR_PROGRESSION,
+    starJade: APP_CONFIG.IS_DEMO_MODE ? APP_CONFIG.DEMO_SETTINGS.INITIAL_STAR_JADE : 16000,
+    starlight: 0,
+    ownedCharacterIds: DEMO_INITIAL_CHAR_IDS,
+    characterProgression: DEMO_INITIAL_PROGRESSION,
     clearedStageIds: [], mapExploration: {}, isTutorialDone: true,
 
     // NEW
@@ -175,8 +217,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [textSettings, setTextSettings] = useState<TextGenerationSettings>(DEFAULT_TEXT_SETTINGS);
 
     // Core Data
-    const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
-    const [credits, setCredits] = useState<number>(2000000);
+    const [userState, setUserState] = useState<UserState>({
+        ...DEFAULT_USER_STATE,
+        starJade: APP_CONFIG.IS_DEMO_MODE ? APP_CONFIG.DEMO_SETTINGS.INITIAL_STAR_JADE : DEFAULT_USER_STATE.starJade
+    });
+    const [credits, setCredits] = useState<number>(APP_CONFIG.IS_DEMO_MODE ? APP_CONFIG.DEMO_SETTINGS.INITIAL_CREDITS : 1000000);
     const [inventory, setInventory] = useState<InventoryItem[]>(DEFAULT_INVENTORY);
     const [customCharactersList, setCustomCharactersList] = useState<Character[]>([]);
     const [favorites, setFavorites] = useState<string[]>([]);
@@ -184,7 +229,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Initialize high affection for testing
     const initialAffection = useMemo(() => {
         const map: AffectionMap = {};
-        CHARACTERS.forEach(c => map[c.id] = 500);
+        const forceVal = APP_CONFIG.IS_DEMO_MODE ? (APP_CONFIG.DEMO_SETTINGS.FORCE_AFFECTION_500 ? 500 : 50) : 500;
+        CHARACTERS.forEach(c => map[c.id] = forceVal);
         return map;
     }, []);
     const [affectionMap, setAffectionMap] = useState<AffectionMap>(initialAffection);
@@ -227,6 +273,31 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     else avatars[key] = value;
                 });
                 setCustomAvatars(avatars);
+
+                // AUTO-FIX: Sanitize System Character Avatars
+                // If a system character has a custom avatar that is broken or empty, it blocks the default one.
+                const systemIds = CHARACTERS.map(c => c.id);
+                const cleanAvatars = { ...avatars };
+                let hasChanges = false;
+
+                systemIds.forEach(id => {
+                    if (cleanAvatars[id]) {
+                        // Check for invalid data
+                        if (cleanAvatars[id].length < 50 || cleanAvatars[id] === 'undefined' || cleanAvatars[id] === 'null') {
+                            console.warn(`Detected broken avatar for system char ${id}, removing...`);
+                            delete cleanAvatars[id];
+                            hasChanges = true;
+                        }
+                    }
+                });
+
+                if (hasChanges) {
+                    setCustomAvatars(cleanAvatars);
+                    // Optionally update DB to remove bad entry, but state fix is immediate priority
+                } else {
+                    setCustomAvatars(avatars);
+                }
+
                 setDashboardImages(dashImgs);
                 setUltImages(ultImgs);
                 setMapImages(await getAllMapImagesFromDB());
@@ -235,25 +306,28 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const loadedSettings = await getGameData<ImageGenerationSettings>('image_settings');
                 if (loadedSettings) {
-
-                    setImageSettings(loadedSettings);
+                    // FORCE MERGE: Ensure SaaS Credentials are kept up to date even for existing users
+                    setImageSettings({
+                        ...loadedSettings,
+                        runpodEndpointId: DEFAULT_IMAGE_SETTINGS.runpodEndpointId,
+                        runpodApiKey: DEFAULT_IMAGE_SETTINGS.runpodApiKey,
+                        provider: 'runpod' // Optional: Force switch to RunPod if you want
+                    });
                 } else {
                     setImageSettings(DEFAULT_IMAGE_SETTINGS);
                 }
 
                 const loadedTextSettings = await getGameData<TextGenerationSettings>('text_settings');
                 if (loadedTextSettings) {
-                    // FORCE MIGRATION: Switch to Grok 4.1 Fast Free if currently using Gemini OR other models
-                    if (loadedTextSettings.provider === 'gemini' ||
-                        loadedTextSettings.customModelName?.includes('google/gemini')) {
-
-                        console.log("Migrating Text Settings to Grok 4.1 Fast Free...");
-                        setTextSettings(DEFAULT_TEXT_SETTINGS);
-                    } else {
-                        setTextSettings(loadedTextSettings);
-                    }
-                } else {
-                    setTextSettings(DEFAULT_TEXT_SETTINGS);
+                    // FORCE MERGE: Ensure SaaS Credentials are kept up to date
+                    console.log("Creating Text Settings with Model:", DEFAULT_TEXT_SETTINGS.runpodModelName);
+                    setTextSettings({
+                        ...loadedTextSettings,
+                        runpodBaseUrl: DEFAULT_TEXT_SETTINGS.runpodBaseUrl,
+                        runpodApiKey: DEFAULT_TEXT_SETTINGS.runpodApiKey,
+                        runpodModelName: DEFAULT_TEXT_SETTINGS.runpodModelName,
+                        provider: 'runpod' // FORCE SWITCH TO RUNPOD
+                    });
                 }
 
                 // Load LoRAs
@@ -286,14 +360,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         loadedUserState.claimedQuestIds = loadedUserState.claimedQuestIds.filter(id => !id.startsWith('daily_'));
                     }
 
-                    // FORCE UNLOCK ALL CHARACTERS FOR TESTING
+                    // Character Unlock Logic - 只在首次初始化時執行
                     const allCharIds = CHARACTERS.map(c => c.id);
-                    allCharIds.forEach(id => {
-                        if (!loadedUserState.ownedCharacterIds.includes(id)) {
-                            loadedUserState.ownedCharacterIds.push(id);
-                            loadedUserState.characterProgression[id] = { level: 80, exp: 0, ascension: 6, unlockedTraces: [`${id} _core`] };
-                        }
-                    });
+                    const demoAllowed = APP_CONFIG.DEMO_SETTINGS.ALLOWED_CHARACTER_IDS;
+
+                    // 檢查是否為首次載入（沒有任何角色進度數據）
+                    const isFirstLoad = Object.keys(loadedUserState.characterProgression).length === 0;
+
+                    if (isFirstLoad) {
+                        console.log('🎮 [INIT] 首次載入，初始化預設角色...');
+                        allCharIds.forEach(id => {
+                            // In Demo Mode, only unlock allowed characters
+                            const shouldUnlock = APP_CONFIG.IS_DEMO_MODE
+                                ? demoAllowed.includes(id)
+                                : true;
+
+                            if (shouldUnlock && !loadedUserState.ownedCharacterIds.includes(id)) {
+                                loadedUserState.ownedCharacterIds.push(id);
+                                const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+                                loadedUserState.characterProgression[id] = { level: 80, exp: 0, maxExp: calculateMaxExp(80), ascension: 6, unlockedTraces: [`${id}_core`] };
+                            }
+                        });
+                    } else {
+                        console.log('🎮 [INIT] 載入現有存檔，保留抽卡記錄');
+                        // 只補充缺失的 maxExp 欄位（向下相容）
+                        Object.keys(loadedUserState.characterProgression).forEach(id => {
+                            const prog = loadedUserState.characterProgression[id];
+                            if (!prog.maxExp) {
+                                const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+                                prog.maxExp = calculateMaxExp(prog.level);
+                            }
+                        });
+                    }
 
                     loadedUserState.isTutorialDone = true;
                     setUserState(loadedUserState);
@@ -301,29 +399,60 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 const loadedFavorites = await getGameData<string[]>('favorite_chars'); if (loadedFavorites) setFavorites(loadedFavorites);
                 const loadedLibrary = await getGameData<SavedStory[]>('story_library'); if (loadedLibrary) setLibrary(loadedLibrary);
-                const loadedCustomChars = await getGameData<Character[]>('custom_characters'); if (loadedCustomChars) setCustomCharactersList(loadedCustomChars);
+                const loadedCustomChars = await getGameData<Character[]>('custom_characters');
+                if (loadedCustomChars) {
+                    // PURGE: Remove any custom characters that conflict with System Characters (to enforce updates)
+                    const systemIds = CHARACTERS.map(c => c.id);
+                    const systemNames = CHARACTERS.map(c => c.name); // Filter by Name too
+
+                    const validCustomChars = loadedCustomChars.filter(c =>
+                        !systemIds.includes(c.id) &&
+                        !systemNames.includes(c.name)
+                    );
+
+                    setCustomCharactersList(validCustomChars);
+
+                    // AUTO-FIX: Restore ownership for existing custom characters if missing
+                    setUserState(current => {
+                        const missingIds = validCustomChars.map(c => c.id).filter(id => !current.ownedCharacterIds.includes(id));
+                        if (missingIds.length === 0) return current;
+
+                        console.log("Restoring missing custom characters ownership:", missingIds);
+                        const next = { ...current };
+                        next.ownedCharacterIds = [...next.ownedCharacterIds, ...missingIds];
+                        next.characterProgression = { ...next.characterProgression };
+                        missingIds.forEach(id => {
+                            if (!next.characterProgression[id]) {
+                                const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+                                next.characterProgression[id] = { level: 1, exp: 0, maxExp: calculateMaxExp(1), ascension: 0, unlockedTraces: [`${id}_core`] };
+                            }
+                        });
+                        return next;
+                    });
+                }
                 const loadedCredits = await getGameData<number>('user_credits'); if (loadedCredits !== null) setCredits(loadedCredits);
                 const loadedInventory = await getGameData<InventoryItem[]>('user_inventory'); if (loadedInventory) setInventory(loadedInventory);
                 const loadedDashboardIds = await getGameData<string[]>('dashboard_girl_ids'); if (loadedDashboardIds) setDashboardGirlIds(loadedDashboardIds);
                 const loadedHomeState = await getGameData<HomeState>('home_state'); if (loadedHomeState) setHomeState(loadedHomeState);
                 const loadedAffection = await getGameData<AffectionMap>('affection_map') || {};
-                // FORCE OVERRIDE: Set all characters to 500 affection as requested
+                // Affection Logic
                 const forcedAffectionMap: AffectionMap = { ...loadedAffection };
+                const forceVal = APP_CONFIG.IS_DEMO_MODE ? (APP_CONFIG.DEMO_SETTINGS.FORCE_AFFECTION_500 ? 500 : 50) : 500;
 
                 // 1. Update known characters
                 CHARACTERS.forEach(c => {
-                    forcedAffectionMap[c.id] = 500;
+                    forcedAffectionMap[c.id] = forceVal;
                 });
 
                 // 2. Update any other keys found in the saved data (to cover custom chars or mismatches)
                 Object.keys(forcedAffectionMap).forEach(key => {
-                    forcedAffectionMap[key] = 500;
+                    forcedAffectionMap[key] = forceVal;
                 });
 
                 // 3. Update loaded custom characters (in case they are not in the map yet)
                 if (loadedCustomChars) {
                     loadedCustomChars.forEach(c => {
-                        forcedAffectionMap[c.id] = 500;
+                        forcedAffectionMap[c.id] = forceVal;
                     });
                 }
 
@@ -331,6 +460,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAffectionMap(forcedAffectionMap);
                 const loadedExpeditions = await getGameData<ActiveExpedition[]>('active_expeditions'); if (loadedExpeditions) setActiveExpeditions(loadedExpeditions);
                 const loadedPreset = await getGameData<any>('preset_equipment'); if (loadedPreset) setPresetEquipment(loadedPreset);
+
+                // Images are already loaded via getAllAvatarsFromDB above - removing legacy overwrite
+
 
                 // Load Memory & Diary
                 const loadedMemories = await getGameData<MemoryMap>('memories_map'); if (loadedMemories) setMemoriesMap(loadedMemories);
@@ -347,19 +479,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Persistence Effects
     useEffect(() => { if (isDataLoaded) saveGameData('image_settings', imageSettings); }, [imageSettings, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('text_settings', textSettings); }, [textSettings, isDataLoaded]);
+    // Auto-Save Effects
     useEffect(() => { if (isDataLoaded) saveGameData('user_state', userState); }, [userState, isDataLoaded]);
-    useEffect(() => { if (isDataLoaded) saveGameData('favorite_chars', favorites); }, [favorites, isDataLoaded]);
-    useEffect(() => { if (isDataLoaded) saveGameData('story_library', library); }, [library, isDataLoaded]);
-    useEffect(() => { if (isDataLoaded) saveGameData('custom_characters', customCharactersList); }, [customCharactersList, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('user_credits', credits); }, [credits, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('user_inventory', inventory); }, [inventory, isDataLoaded]);
-    useEffect(() => { if (isDataLoaded) saveGameData('dashboard_girl_ids', dashboardGirlIds); }, [dashboardGirlIds, isDataLoaded]);
-    useEffect(() => { if (isDataLoaded) saveGameData('home_state', homeState); }, [homeState, isDataLoaded]);
+    useEffect(() => { if (isDataLoaded) saveGameData('custom_characters', customCharactersList); }, [customCharactersList, isDataLoaded]);
+    useEffect(() => { if (isDataLoaded) saveGameData('favorite_chars', favorites); }, [favorites, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('affection_map', affectionMap); }, [affectionMap, isDataLoaded]);
+    useEffect(() => { if (isDataLoaded) saveGameData('home_state', homeState); }, [homeState, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('active_expeditions', activeExpeditions); }, [activeExpeditions, isDataLoaded]);
+    useEffect(() => { if (isDataLoaded) saveGameData('story_library', library); }, [library, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('preset_equipment', presetEquipment); }, [presetEquipment, isDataLoaded]);
+    useEffect(() => { if (isDataLoaded) saveGameData('dashboard_girl_ids', dashboardGirlIds); }, [dashboardGirlIds, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('memories_map', memoriesMap); }, [memoriesMap, isDataLoaded]);
     useEffect(() => { if (isDataLoaded) saveGameData('diaries_map', diariesMap); }, [diariesMap, isDataLoaded]);
+
 
     // Image Handlers
     const updateAvatar = async (charId: string, dataUrl: string) => { setCustomAvatars(prev => ({ ...prev, [charId]: dataUrl })); await saveAvatarToDB(charId, dataUrl); };
@@ -377,16 +511,73 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Derived Data
     const mergedCharacters = useMemo(() => {
-        return [...customCharactersList, ...CHARACTERS].map(c => {
+        let baseList = [...customCharactersList, ...CHARACTERS];
+
+        // Filter for Demo Mode if enabled
+        // 在 DEMO 模式下：
+        // - 如果 ALLOWED_CHARACTER_IDS 為空，允許所有角色
+        // - 否則，只顯示允許的角色或已擁有的角色
+        if (APP_CONFIG.IS_DEMO_MODE && APP_CONFIG.DEMO_SETTINGS.ALLOWED_CHARACTER_IDS.length > 0) {
+            baseList = baseList.filter(c =>
+                APP_CONFIG.DEMO_SETTINGS.ALLOWED_CHARACTER_IDS.includes(c.id) ||
+                userState.ownedCharacterIds.includes(c.id)
+            );
+        }
+
+        // 隱藏特定角色（例如：允允）
+        baseList = baseList.filter(c => c.name !== '允允');
+
+        return baseList.map(c => {
             const preset = presetEquipment[c.id] || {};
             return { ...c, equipment: preset };
         });
-    }, [customCharactersList, presetEquipment]);
+    }, [customCharactersList, presetEquipment, userState.ownedCharacterIds]);
 
     const ownedCharacters = useMemo(() => mergedCharacters.filter(c => userState.ownedCharacterIds.includes(c.id)), [mergedCharacters, userState.ownedCharacterIds]);
 
     // Helpers
-    const addCustomCharacter = (char: Character) => setCustomCharactersList(prev => [...prev, char]);
+    const addCustomCharacter = (char: Character) => {
+        setCustomCharactersList(prev => [...prev, char]);
+        setUserState(prev => {
+            if (prev.ownedCharacterIds.includes(char.id)) return prev;
+            return {
+                ...prev,
+                ownedCharacterIds: [...prev.ownedCharacterIds, char.id],
+                characterProgression: {
+                    ...prev.characterProgression,
+                    [char.id]: { level: 1, exp: 0, ascension: 0, unlockedTraces: [`${char.id}_core`] }
+                }
+            };
+        });
+    };
+
+    const deleteCustomCharacter = async (charId: string) => {
+        // 1. 從自定義角色列表中移除
+        setCustomCharactersList(prev => prev.filter(c => c.id !== charId));
+
+        // 2. 從 userState 中移除
+        setUserState(prev => {
+            const newOwnedIds = prev.ownedCharacterIds.filter(id => id !== charId);
+            const newProgression = { ...prev.characterProgression };
+            delete newProgression[charId];
+
+            return {
+                ...prev,
+                ownedCharacterIds: newOwnedIds,
+                characterProgression: newProgression
+            };
+        });
+
+        // 3. 從 affectionMap 中移除
+        setAffectionMap(prev => {
+            const newMap = { ...prev };
+            delete newMap[charId];
+            return newMap;
+        });
+
+        console.log(`✅ 已刪除自定義角色: ${charId}`);
+    };
+
     const updateAffection = async (charId: string, newScore: number) => {
         const newMap = { ...affectionMap, [charId]: newScore };
         setAffectionMap(newMap);
@@ -457,7 +648,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             customLoraTriggers, updateCustomLoraTrigger,
 
             mergedCharacters, ownedCharacters,
-            addCustomCharacter, updateAffection, trackStat,
+            addCustomCharacter, deleteCustomCharacter, updateAffection, trackStat,
             memoriesMap, setMemoriesMap, diariesMap, setDiariesMap, addMemory, addDiaryEntry
         }}>
             {children}

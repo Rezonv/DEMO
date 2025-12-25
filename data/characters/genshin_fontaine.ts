@@ -17,7 +17,7 @@ export const CHARS_GENSHIN_FONTAINE: Character[] = [
     portraitUrl: '/characters/genshin/furina/portrait.png',
     defaultRole: '楓丹廷大明星',
     passiveSkill: { name: '普世歡騰', description: '精彩的演出，好感度獲取提升 20%。', effectType: 'boost_affection', value: 0.2 },
-    loraTrigger: 'furina_(genshin_impact), white_hair, blue_streak, top_hat, blue_eyes, dress'
+    loraTrigger: 'furina_(genshin_impact), white_hair, blue_streaked_hair, ahoge, blue_eyes, heterochromia, focalor_costume, top_hat, blue_jacket, white_vest, ascot, shorts, thighhighs, gloves, asymmetrical_gloves, flat_chest'
   },
   {
     id: 'navia',

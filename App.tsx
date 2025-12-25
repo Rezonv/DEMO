@@ -127,7 +127,7 @@ const AppContent = () => {
             const newSegments = [{ id: uuid(), text: result.text, imageUrl: undefined, isUserChoice: false }];
             setSegments(newSegments);
             setCurrentOptions(result.options || []);
-            setLibrary(prev => [{ id: newStoryId, title: `${targetChar.name} - ${scene.location}`, date: new Date().toISOString(), characterName: targetChar.name, segments: newSegments, finalAffection: result.newAffectionScore || affectionMap[targetChar.id] || 50 }, ...prev]);
+            setLibrary(prev => [{ id: newStoryId, title: `${targetChar.name} - ${scene.location}`, date: new Date().toISOString(), characterName: targetChar.name, segments: newSegments, finalAffection: result.newAffectionScore || affectionMap[targetChar.id] || 50, sceneContext: scene }, ...prev]);
             if (result.newAffectionScore) updateAffection(targetChar.id, result.newAffectionScore);
             setView('story');
             trackStat('chatInteractions', 1);
@@ -142,7 +142,7 @@ const AppContent = () => {
         setSegments(prev => [...prev, userSegment]);
         setAppState(AppState.GENERATING_TEXT);
         try {
-            const historyText = segments.slice(-5).map(s => s.text);
+            const historyText = segments.slice(-50).map(s => s.text);
             const memories = memoriesMap[selectedCharacter.id] || [];
             const result = await generateStorySegment(selectedCharacter, userRole, sceneContext, historyText, userText, affectionMap[selectedCharacter.id] || 50, useSearch, textSettings, memories);
             const aiSegment: StorySegment = { id: uuid(), text: result.text, isUserChoice: false, affectionChange: result.newAffectionScore ? (result.newAffectionScore - (affectionMap[selectedCharacter.id] || 0)) : 0, affectionSource: result.affectionReason };
@@ -249,24 +249,85 @@ const AppContent = () => {
         alert(`購買成功: ${item.name}`);
     };
 
+    // 處理抽卡獲得角色
+    const handleCharacterGet = (char: Character) => {
+        console.log('🎰 [GACHA] 抽到角色:', char.name, char.id);
+        console.log('🎰 [GACHA] 當前擁有角色:', userState.ownedCharacterIds);
+
+        // 檢查是否已擁有
+        if (userState.ownedCharacterIds.includes(char.id)) {
+            console.log('⚠️ [GACHA] 重複角色，轉換為星光 +10');
+            // 已擁有，轉換為星光（重複角色獎勵）
+            setUserState(prev => ({ ...prev, starlight: prev.starlight + 10 }));
+            alert(`重複角色：${char.name}，已轉換為 10 星光！`);
+            return;
+        }
+
+        console.log('✅ [GACHA] 新角色！正在添加到隊伍...');
+        // 新角色，添加到隊伍
+        setUserState(prev => {
+            const calculateMaxExp = (level: number) => Math.floor(100 * Math.pow(level, 1.5));
+            const newState = {
+                ...prev,
+                ownedCharacterIds: [...prev.ownedCharacterIds, char.id],
+                characterProgression: {
+                    ...prev.characterProgression,
+                    [char.id]: {
+                        level: 1,
+                        exp: 0,
+                        maxExp: calculateMaxExp(1),
+                        ascension: 0,
+                        unlockedTraces: [`${char.id}_core`]
+                    }
+                }
+            };
+            console.log('✅ [GACHA] 新狀態:', newState.ownedCharacterIds);
+            return newState;
+        });
+
+        alert(`獲得新角色：${char.name}！`);
+    };
+
+    // 處理抽卡獲得道具
+    const handleGachaAdd = (item: ShopItem) => {
+        setInventory(prev => {
+            const existing = prev.find(i => i.id === item.id);
+            if (existing) return prev.map(i => i.id === item.id ? { ...i, count: i.count + 1 } : i);
+            return [...prev, { ...item, count: 1 }];
+        });
+    };
+
+    // Auto-Save Effect
+    useEffect(() => {
+        if (!currentStoryId || segments.length === 0 || !selectedCharacter) return;
+
+        const existingIdx = library.findIndex(s => s.id === currentStoryId);
+        if (existingIdx >= 0) {
+            const currentItem = library[existingIdx];
+            // Only update if something actually changed (simple length check for performance)
+            if (currentItem.segments.length !== segments.length ||
+                JSON.stringify(currentItem.segments.map(s => s.imageUrl)) !== JSON.stringify(segments.map(s => s.imageUrl))) {
+
+                const updatedStory: SavedStory = {
+                    ...currentItem,
+                    date: new Date().toISOString(),
+                    segments: segments,
+                    finalAffection: affectionMap[selectedCharacter.id] || 50,
+                    sceneContext: sceneContext
+                };
+                const newLib = [...library];
+                newLib[existingIdx] = updatedStory;
+                setLibrary(newLib);
+            }
+        }
+    }, [segments, currentStoryId, selectedCharacter, sceneContext, library, affectionMap]);
+
     const onEquip = (charId: string, itemId: string, slot: 'weapon' | 'armor' | 'accessory') => {
         setPresetEquipment(prev => ({ ...prev, [charId]: { ...(prev[charId] || {}), [slot + 'Id']: itemId } }));
     };
 
     const onUnequip = (charId: string, slot: 'weapon' | 'armor' | 'accessory') => {
         setPresetEquipment(prev => { const n = { ...prev }; if (n[charId]) delete n[charId][slot + 'Id']; return n; });
-    };
-
-    const handleGachaAdd = (item: ShopItem) => {
-        setInventory(prev => { const e = prev.find(i => i.id === item.id); if (e) return prev.map(i => i.id === item.id ? { ...i, count: i.count + 1 } : i); return [...prev, { ...item, count: 1 }]; });
-    };
-
-    const handleCharacterGet = (char: Character) => {
-        if (!userState.ownedCharacterIds.includes(char.id)) {
-            setUserState(prev => ({ ...prev, ownedCharacterIds: [...prev.ownedCharacterIds, char.id], characterProgression: { ...prev.characterProgression, [char.id]: { level: 1, exp: 0, ascension: 0, unlockedTraces: [] } } }));
-        } else {
-            setUserState(prev => ({ ...prev, starlight: prev.starlight + 10 }));
-        }
     };
 
     const handleClaimQuest = (quest: Quest) => {
@@ -435,13 +496,26 @@ const AppContent = () => {
                             itemImages={itemImages}
                         />
                     )}
-                    {view === 'library' && <Library library={library} onLoadStory={(story) => { const foundChar = mergedCharacters.find((c: any) => c.name === story.characterName) || CHARACTERS[0]; setSelectedCharacter(foundChar); setSegments(story.segments); setCurrentStoryId(story.id); if (story.title.includes('【回憶】')) { setView('memory'); } else { updateAffection(foundChar.id, story.finalAffection); setCurrentOptions([{ label: "繼續", action: "continue" }]); setView('story'); } }} onDeleteStory={(id) => setLibrary(prev => prev.filter(s => s.id !== id))} onBack={() => setView('home')} />}
-                    {view === 'story' && selectedCharacter && <StoryReader character={selectedCharacter} segments={segments} currentOptions={currentOptions} appState={appState} customAvatar={customAvatars[selectedCharacter.id]} generatingSegmentId={generatingSegmentId} onOptionSelect={handleOptionSelect} onGenerateImage={handleGenerateImage} onEditImage={handleEditImage} onGenerateVideo={() => { }} onToggleFavorite={(segId) => setSegments(prev => prev.map(s => s.id === segId ? { ...s, isFavorited: !s.isFavorited } : s))} onSave={() => { const storyData: SavedStory = { id: currentStoryId || uuid(), title: `${selectedCharacter.name} - ${sceneContext.location}`, date: new Date().toISOString(), characterName: selectedCharacter.name, segments: segments, finalAffection: affectionMap[selectedCharacter.id] || 50 }; const existingIdx = library.findIndex(s => s.id === storyData.id); if (existingIdx >= 0) { const newLib = [...library]; newLib[existingIdx] = storyData; setLibrary(newLib); } else { setLibrary([storyData, ...library]); } alert("進度已保存"); }} onBack={() => setView('home')} currentAffection={currentStoryAffection} inventory={inventory} onOpenShop={() => setView('shop')} onSendGift={handleSendGift} onUploadUserImage={handleUserImageUpload} onUpdateAffection={(val) => updateAffection(selectedCharacter.id, val)} />}
+                    {view === 'library' && <Library library={library} onLoadStory={(story) => {
+                        const foundChar = mergedCharacters.find((c: any) => c.name === story.characterName) || CHARACTERS[0];
+                        setSelectedCharacter(foundChar);
+                        setSegments(story.segments);
+                        setCurrentStoryId(story.id);
+                        if (story.sceneContext) setSceneContext(story.sceneContext); // 還原場景背景
+                        if (story.title.includes('【回憶】')) {
+                            setView('memory');
+                        } else {
+                            updateAffection(foundChar.id, story.finalAffection);
+                            setCurrentOptions([{ label: "繼續", action: "continue" }]);
+                            setView('story');
+                        }
+                    }} onDeleteStory={(id) => setLibrary(prev => prev.filter(s => s.id !== id))} onBack={() => setView('home')} />}
+                    {view === 'story' && selectedCharacter && <StoryReader character={selectedCharacter} segments={segments} currentOptions={currentOptions} appState={appState} customAvatar={customAvatars[selectedCharacter.id]} generatingSegmentId={generatingSegmentId} onOptionSelect={handleOptionSelect} onGenerateImage={handleGenerateImage} onEditImage={handleEditImage} onGenerateVideo={() => { }} onToggleFavorite={(segId) => setSegments(prev => prev.map(s => s.id === segId ? { ...s, isFavorited: !s.isFavorited } : s))} onSave={() => { const storyData: SavedStory = { id: currentStoryId || uuid(), title: `${selectedCharacter.name} - ${sceneContext.location}`, date: new Date().toISOString(), characterName: selectedCharacter.name, segments: segments, finalAffection: affectionMap[selectedCharacter.id] || 50, sceneContext: sceneContext }; const existingIdx = library.findIndex(s => s.id === storyData.id); if (existingIdx >= 0) { const newLib = [...library]; newLib[existingIdx] = storyData; setLibrary(newLib); } else { setLibrary([storyData, ...library]); } alert("手動存檔成功 (已啟用自動存檔)"); }} onBack={() => setView('home')} currentAffection={currentStoryAffection} inventory={inventory} onOpenShop={() => setView('shop')} onSendGift={handleSendGift} onUploadUserImage={handleUserImageUpload} onUpdateAffection={(val) => updateAffection(selectedCharacter.id, val)} />}
                     {view === 'memory' && selectedCharacter && <MemoryReader character={selectedCharacter} segment={segments[0]} isGenerating={appState === AppState.GENERATING_TEXT || appState === AppState.GENERATING_IMAGE} onBack={() => setView('home')} />}
                     {view === 'scene_setup' && selectedCharacter && <SceneSetup character={selectedCharacter} userRole={userRole} customAvatar={customAvatars[selectedCharacter.id]} onUserRoleChange={setUserRole} onStart={handleSceneStart} onBack={() => setView('character_select')} currentAffection={affectionMap[selectedCharacter.id] || 0} isGeneratingStory={appState === AppState.GENERATING_TEXT} textSettings={textSettings} />}
-                    {view === 'dream_home' && <DreamHome homeState={homeState} characters={ownedCharacters} credits={credits} inventory={inventory} affectionMap={affectionMap} customAvatars={customAvatars} activeEvents={activeEvents} focusedEventId={focusedEventId} onClearFocusedEvent={() => setFocusedEventId(null)} onUpdateHomeState={setHomeState} onUpdateCredits={setCredits} onUpdateAffection={updateAffection} onUpdateInventory={setInventory} onResolveEvent={(id) => setActiveEvents(prev => prev.filter(e => e.id !== id))} onBack={() => setView('home')} imageSettings={imageSettings} textSettings={textSettings} diariesMap={diariesMap} addDiaryEntry={addDiaryEntry} addMemory={addMemory} />}
+                    {view === 'dream_home' && <DreamHome homeState={homeState} characters={ownedCharacters} credits={credits} inventory={inventory} affectionMap={affectionMap} customAvatars={customAvatars} activeEvents={activeEvents} focusedEventId={focusedEventId} onClearFocusedEvent={() => setFocusedEventId(null)} onUpdateHomeState={setHomeState} onUpdateCredits={setCredits} onUpdateAffection={updateAffection} onUpdateInventory={setInventory} onResolveEvent={(id) => setActiveEvents(prev => prev.filter(e => e.id !== id))} onBack={() => setView('home')} imageSettings={imageSettings} textSettings={textSettings} customLoras={customLoras} customLoraTriggers={customLoraTriggers} diariesMap={diariesMap} addDiaryEntry={addDiaryEntry} addMemory={addMemory} />}
                     {view === 'expedition' && <ExpeditionCenter characters={ownedCharacters} activeExpeditions={activeExpeditions} customAvatars={customAvatars} inventory={inventory} credits={credits} homeState={homeState} onStartExpedition={(mapId, charIds, equipId) => { const newExp: ActiveExpedition = { id: uuid(), mapId, characterIds: charIds, startTime: Date.now(), endTime: Date.now() + (EXPEDITION_MAPS.find(m => m.id === mapId)?.durationMinutes || 60) * 60 * 1000, claimed: false, usedEquipmentId: equipId, bonusCreditMult: 1, bonusAffectionMult: 1 }; setActiveExpeditions(prev => [...prev, newExp]); setCredits(prev => prev - (EXPEDITION_MAPS.find(m => m.id === mapId)?.ticketCost || 0)); }} onClaimExpedition={(id, log, cred, aff, mats, rare) => { setActiveExpeditions(prev => prev.filter(e => e.id !== id)); setCredits(prev => prev + cred); const exp = activeExpeditions.find(e => e.id === id); if (exp) { exp.characterIds.forEach(cid => updateAffection(cid, (affectionMap[cid] || 0) + aff)); } if (mats.length > 0 || rare) { setInventory(prev => { let newInv = [...prev]; mats.forEach(m => { const exist = newInv.find(i => i.id === m.id); if (exist) exist.count += m.count; else newInv.push(m); }); if (rare) { const exist = newInv.find(i => i.id === rare.id); if (exist) exist.count += 1; else newInv.push({ ...rare, count: 1 }); } return newInv; }); } trackStat('expeditionsCompleted', 1); }} onBack={() => setView('home')} />}
-                    {view === 'gacha' && <GachaSystem credits={credits} starJade={userState.starJade} onSpendCredits={(amt) => setCredits(prev => prev - amt)} onSpendStarJade={(amt) => setUserState(prev => ({ ...prev, starJade: prev.starJade - amt }))} onAddItem={handleGachaAdd} onAddCharacter={handleCharacterGet} onBack={() => handleEnterApp()} allCharacters={mergedCharacters} isTutorial={userState.ownedCharacterIds.length === 0} trackStat={trackStat} />}
+                    {view === 'gacha' && <GachaSystem credits={credits} starJade={userState.starJade} onSpendCredits={(amt) => setCredits(prev => prev - amt)} onSpendStarJade={(amt) => setUserState(prev => ({ ...prev, starJade: prev.starJade - amt }))} onAddItem={handleGachaAdd} onAddCharacter={handleCharacterGet} onBack={() => handleEnterApp()} allCharacters={mergedCharacters} isTutorial={!userState.isTutorialDone} trackStat={trackStat} />}
                     {view === 'compendium' && <ImageCompendium isOpen={true} onClose={() => setView('home')} customCharacters={customCharactersList} mapImages={mapImages} onUploadMapImage={updateMapImage} enemyImages={enemyImages} onUploadEnemyImage={updateEnemyImage} itemImages={itemImages} onUploadItemImage={updateItemImage} characterAvatars={customAvatars} onUploadCharacterImage={(id, file) => { const reader = new FileReader(); reader.onload = async (e) => { if (e.target?.result) await updateAvatar(id, e.target!.result as string) }; reader.readAsDataURL(file); }} ultImages={ultImages} onUploadUltImage={(id, file) => { const reader = new FileReader(); reader.onload = async (e) => { if (e.target?.result) await updateUltImage(id, e.target!.result as string) }; reader.readAsDataURL(file); }} />}
                     {view === 'dashboard_manager' && <DashboardManager isOpen={true} onClose={() => setView('home')} characters={ownedCharacters} dashboardImages={dashboardImages} rotationIds={dashboardGirlIds} onToggleRotation={(id) => setDashboardGirlIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} onUploadDashboardImage={(id, file) => { const reader = new FileReader(); reader.onload = async (e) => { if (e.target?.result) await updateDashboardImage(id, e.target!.result as string) }; reader.readAsDataURL(file); }} />}
 

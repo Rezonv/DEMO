@@ -19,6 +19,16 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        '/runpod-proxy': {
+          target: 'https://api.runpod.ai/v2/nu12bv9gmixm0v',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/runpod-proxy/, ''),
+          secure: false,
+          timeout: 600000, // 10 Minutes (For 72B Model)
+          proxyTimeout: 600000 // 10 Minutes
+        }
+      }
     },
     plugins: [react()],
     define: {

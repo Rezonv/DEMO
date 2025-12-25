@@ -111,32 +111,14 @@ const cleanJson = (text: string | undefined): string => {
   // 4. Remove control characters
   cleaned = cleaned.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
 
-  // 5. Fix Chinese/Full-width quotes (「」『』) -> English quotes
-  cleaned = cleaned
-    .replace(/「/g, '"')
-    .replace(/」/g, '"')
-    .replace(/『/g, '"')
-    .replace(/』/g, '"');
-
-  // 6. Fix single quotes to double quotes
-  cleaned = cleaned.replace(/'/g, '"');
-
-  // 7. Fix missing quotes around property names
-  // Match: word: (without quotes) -> "word":
-  cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-
-  // 8. Remove comments and annotations in parentheses
-  // Example: "label": "text"(comment), -> "label": "text",
-  cleaned = cleaned.replace(/"([^"]*)"(\([^)]*\))/g, '"$1"');
-
-  // 9. Fix common JSON issues
+  // 5. Fix common JSON issues
   cleaned = cleaned
     .replace(/,\s*}/g, '}')        // Remove trailing commas before }
     .replace(/,\s*]/g, ']')        // Remove trailing commas before ]
     .replace(/}\s*{/g, '},{')      // Fix missing commas between objects
     .replace(/]\s*\[/g, '],[');    // Fix missing commas between arrays
 
-  // 10. Normalize whitespace
+  // 6. Normalize whitespace
   cleaned = cleaned
     .replace(/\n/g, ' ')           // Replace newlines with spaces
     .replace(/\r/g, '')            // Remove carriage returns
@@ -690,21 +672,9 @@ export const generateStorySegment = async (
       }
     }
 
-    // Default options for fallback
-    const defaultOptions = [
-      { label: "溫柔地回應", action: "gentle_reply" },
-      { label: "親密地肢體接觸", action: "physical_contact" },
-      { label: "沉默並觀察", action: "observe" }
-    ];
-
-    // Ensure options are always available
-    const finalOptions = (json.options && json.options.length > 0) ? json.options : defaultOptions;
-
-    console.log(`[Story Options] Using ${finalOptions === defaultOptions ? 'DEFAULT' : 'LLM'} options:`, finalOptions.map(o => o.label).join(', '));
-
     return {
       text: json.text,
-      options: finalOptions,
+      options: json.options || [],
       rawResponse: responseText,
       newAffectionScore: json.newAffectionScore || currentAffection,
       affectionReason: json.affectionReason,
@@ -947,75 +917,9 @@ export const generateCharacterImage = async (
     'citlali': 'citlali_(genshin_impact), pink_hair, hood, shaman'
   };
 
-  // --- CUSTOM CHARACTER TAG EXTRACTION (Only for custom characters without FORCE_TAGS) ---
-  const extractCustomCharacterTags = (char: Character): string => {
-    // Skip if character has FORCE_TAGS (preset characters)
-    if (FORCE_TAGS[char.id]) return '';
-
-    if (!char.description) return '';
-
-    const description = char.description;
-    const tags: string[] = [];
-
-    // Hair color mapping (Chinese -> English)
-    const hairColorMap: Record<string, string> = {
-      '黑': 'black hair', '白': 'white hair', '銀': 'silver hair',
-      '金': 'blonde hair', '黃': 'blonde hair', '紫': 'purple hair',
-      '紅': 'red hair', '藍': 'blue hair', '綠': 'green hair',
-      '粉': 'pink hair', '棕': 'brown hair', '褐': 'brown hair',
-      '灰': 'gray hair', '橙': 'orange hair'
-    };
-
-    // Extract hair color
-    for (const [cn, en] of Object.entries(hairColorMap)) {
-      if (description.includes(cn + '色') || description.includes(cn + '髮') || description.includes(cn + '头发')) {
-        tags.push(en);
-        break;
-      }
-    }
-
-    // Extract hair style
-    const hairStyleMap: Record<string, string> = {
-      '長髮': 'long hair', '短髮': 'short hair', '中長髮': 'medium hair',
-      '及腰': 'very long hair', '雙馬尾': 'twintails', '單馬尾': 'ponytail',
-      '捲髮': 'curly hair', '直髮': 'straight hair', '波浪': 'wavy hair',
-      '辮子': 'braid'
-    };
-
-    for (const [cn, en] of Object.entries(hairStyleMap)) {
-      if (description.includes(cn)) {
-        tags.push(en);
-        break;
-      }
-    }
-
-    // Extract eye color
-    const eyeMatch = description.match(/(黑|白|金|銀|紫|紅|藍|綠|粉|棕|褐|灰|橙|黃)色?(眼睛|眼瞳|瞳孔|眼)/);
-    if (eyeMatch) {
-      const eyeColorMap: Record<string, string> = {
-        '黑': 'black eyes', '白': 'white eyes', '金': 'golden eyes', '銀': 'silver eyes',
-        '紫': 'purple eyes', '紅': 'red eyes', '藍': 'blue eyes', '綠': 'green eyes',
-        '粉': 'pink eyes', '棕': 'brown eyes', '褐': 'brown eyes', '灰': 'gray eyes',
-        '橙': 'orange eyes', '黃': 'yellow eyes'
-      };
-      if (eyeColorMap[eyeMatch[1]]) {
-        tags.push(eyeColorMap[eyeMatch[1]]);
-      }
-    }
-
-    const result = tags.join(', ');
-    if (result) {
-      console.log(`[Custom Character Tags] ${char.name}: ${result}`);
-    }
-    return result;
-  };
-
-  // Extract custom tags for characters without FORCE_TAGS
-  const customTags = extractCustomCharacterTags(character);
-
-  // Determine effective LoRA trigger (Input > Force > Custom > Empty)
+  // Determine effective LoRA trigger (Input > Force > Empty)
   // CRITICAL FIX: Allow user-defined triggers (from UI) to override hardcoded force tags
-  const loraTrigger = loraTriggerInput || FORCE_TAGS[character.id] || customTags || "";
+  const loraTrigger = loraTriggerInput || FORCE_TAGS[character.id] || "";
 
   // Enforce RunPod Provider (User Request)
   // We ignore settings.provider and always use RunPod with hardcoded credentials

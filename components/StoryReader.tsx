@@ -84,7 +84,7 @@ const StoryReader: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customInput, setCustomInput] = useState("");
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
-  const [useSearch, setUseSearch] = useState(false);
+
 
   // Image Navigation State
   const imageSegments = segments.filter(s => s.imageUrl);
@@ -132,7 +132,7 @@ const StoryReader: React.FC<Props> = ({
   const handleCustomSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!customInput.trim()) return;
-    onOptionSelect({ label: customInput, action: "使用者自定義行動" }, useSearch);
+    onOptionSelect({ label: customInput, action: "使用者自定義行動" });
     setCustomInput("");
   };
 
@@ -230,7 +230,7 @@ const StoryReader: React.FC<Props> = ({
 
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-full overflow-hidden border-2 border-gray-700 bg-gray-800 shadow-lg`}>
-              <img src={customAvatar || character.avatarUrl} alt={character.name} className="w-full h-full object-cover" />
+              <img src={customAvatar || character.avatarUrl} alt={character.name} className="w-full h-full object-cover object-top" />
             </div>
 
             <div className="flex flex-col">
@@ -374,7 +374,7 @@ const StoryReader: React.FC<Props> = ({
                       </button>
 
                       <div className="text-gray-200 leading-relaxed text-lg whitespace-pre-wrap font-light tracking-wide mb-4">
-                        {segment.text}
+                        {segment.text.replace(/\\n/g, '\n')}
                       </div>
 
                       {/* Image Link Button (Small) */}
@@ -420,7 +420,7 @@ const StoryReader: React.FC<Props> = ({
             {appState === AppState.GENERATING_TEXT && (
               <div className="flex items-center gap-4 text-gray-400 p-4 bg-gray-800/20 rounded-xl border border-gray-800 animate-pulse">
                 <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
-                  <img src={customAvatar || character.avatarUrl} className="w-full h-full object-cover opacity-50" />
+                  <img src={customAvatar || character.avatarUrl} className="w-full h-full object-cover object-top opacity-50" />
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-medium text-pink-500">{character.name} 正在思考...</span>
@@ -436,14 +436,7 @@ const StoryReader: React.FC<Props> = ({
             <div className="shrink-0 p-4 bg-gray-900/95 backdrop-blur-lg border-t border-gray-800/50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-40">
               <div className="w-full flex flex-col gap-4">
 
-                {/* Search Toggle */}
-                <div className="flex justify-end">
-                  <label className={`flex items-center gap-2 text-xs font-bold cursor-pointer select-none transition-colors px-3 py-1 rounded-full border ${useSearch ? 'bg-blue-900/30 border-blue-500 text-blue-400' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
-                    <input type="checkbox" checked={useSearch} onChange={e => setUseSearch(e.target.checked)} className="hidden" />
-                    <div className={`w-3 h-3 rounded-full ${useSearch ? 'bg-blue-400' : 'bg-gray-600'}`}></div>
-                    Google Search
-                  </label>
-                </div>
+
 
                 <form onSubmit={handleCustomSubmit} className="flex gap-2 relative items-center">
                   <button
@@ -460,7 +453,7 @@ const StoryReader: React.FC<Props> = ({
                     type="text"
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
-                    placeholder={useSearch ? "輸入問題來搜尋最新資訊..." : "輸入行動或對話..."}
+                    placeholder="輸入行動或對話..."
                     className="flex-1 bg-gray-800 text-white rounded-xl pl-4 pr-12 py-3.5 border border-gray-700 focus:border-pink-500 focus:outline-none"
                   />
                   <button
@@ -476,7 +469,7 @@ const StoryReader: React.FC<Props> = ({
                   {currentOptions.map((option, idx) => (
                     <button
                       key={idx}
-                      onClick={() => onOptionSelect(option, useSearch)}
+                      onClick={() => onOptionSelect(option)}
                       className="px-5 py-4 rounded-xl bg-gray-800 hover:bg-gray-750 border border-gray-700 hover:border-pink-500 text-left transition-all"
                     >
                       <span className="block font-bold text-gray-200 text-sm mb-1">{option.label}</span>

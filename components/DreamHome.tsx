@@ -25,6 +25,8 @@ interface Props {
   onBack: () => void;
   imageSettings?: ImageGenerationSettings;
   textSettings?: TextGenerationSettings;
+  customLoras?: { [key: string]: string };
+  customLoraTriggers?: { [key: string]: string };
   diariesMap?: DiaryMap;
   addDiaryEntry?: (charId: string, entry: DiaryEntry) => void;
   addMemory?: (charId: string, text: string, type: 'fact' | 'event' | 'preference', importance?: number) => void;
@@ -48,6 +50,8 @@ const DreamHome: React.FC<Props> = ({
   onBack,
   imageSettings,
   textSettings,
+  customLoras = {},
+  customLoraTriggers = {},
   diariesMap,
   addDiaryEntry,
   addMemory
@@ -265,7 +269,7 @@ const DreamHome: React.FC<Props> = ({
       addDialogue(char.id, { type: 'user', text: "今天過得怎麼樣？寫篇日記吧。", timestamp: Date.now(), category: 'chat' });
       try {
         const history = (interactionHistory[char.id] || []).map(i => `${i.type === 'user' ? 'User' : char.name}: ${i.text}`);
-        const entry = await generateDiaryEntry(char, history, affectionMap[char.id] || 50);
+        const entry = await generateDiaryEntry(char, history, affectionMap[char.id] || 50, textSettings);
         addDiaryEntry(char.id, entry);
         addDialogue(char.id, { type: 'ai', text: `(羞澀地寫下了日記...)\n\n「${entry.title}」\n${entry.summary}`, timestamp: Date.now(), category: 'chat' });
       } catch (e) {
@@ -281,7 +285,9 @@ const DreamHome: React.FC<Props> = ({
       addDialogue(char.id, { type: 'user', text: "能讓我看看妳現在的樣子嗎？", timestamp: Date.now(), category: 'chat' });
       try {
         const prompt = `Selfie in ${config.name}, ${char.description.slice(0, 50)}`;
-        const img = await generateCharacterImage(char, prompt, undefined, imageSettings, undefined, undefined, affectionMap[char.id] || 50);
+        const loraTag = customLoras[char.id];
+        const loraTrigger = customLoraTriggers[char.id];
+        const img = await generateCharacterImage(char, prompt, undefined, imageSettings, loraTag, loraTrigger, affectionMap[char.id] || 50);
         if (img) {
           addDialogue(char.id, { type: 'ai', text: "喜歡嗎？", imageUrl: img, timestamp: Date.now(), category: 'chat' });
         } else {
@@ -303,7 +309,7 @@ const DreamHome: React.FC<Props> = ({
     const history = (interactionHistory[char.id] || []).map(i => `${i.type === 'user' ? 'User' : char.name}: ${i.text}`);
 
     try {
-      const text = await generateHomeInteraction(char, config.name, affectionMap[char.id] || 50, type, history, customText);
+      const text = await generateHomeInteraction(char, config.name, affectionMap[char.id] || 50, type, history, customText, textSettings);
       addDialogue(char.id, { type: 'ai', text, timestamp: Date.now(), category: type === 'work' ? 'work' : 'chat' });
     } finally {
       setIsGenerating(false);

@@ -21,6 +21,16 @@ export interface Character {
   dashboardImageUrl?: string;
   ultImageUrl?: string;
 
+  // New: Relationship System (for Lore Depth)
+  // AI Personality Extensions
+  dialogueStyle?: string; // e.g. "Arrogant, speaks in ancient prose, calls user 'Mongrel'"
+  exampleDialogue?: string; // e.g. "User: Hello. Char: Hmph, you dare address me?"
+  relationships?: {
+    characterId: string; // ID of the other character (or 'Trailblazer')
+    type: string; // e.g. "Friend", "Rival", "Mother Figure"
+    description: string; // e.g. "Thinks she is annoying but respects her skill."
+  }[];
+
   // Combat & Expedition
   passiveSkill?: PassiveSkill;
   activeSkill?: ActiveSkill;
@@ -46,7 +56,8 @@ export interface Character {
 
 export interface CharacterProgression {
   level: number;
-  exp: number;
+  exp: number;          // 當前經驗值
+  maxExp: number;       // 升級所需經驗
   ascension: number;
   unlockedTraces?: string[];
 }
@@ -203,6 +214,7 @@ export interface SavedStory {
   characterName: string;
   segments: StorySegment[];
   finalAffection: number;
+  sceneContext?: SceneContext;
 }
 
 export interface GlobalBuffs {
@@ -576,10 +588,20 @@ export interface ImageGenerationSettings {
 }
 
 export interface TextGenerationSettings {
-  provider: 'gemini' | 'custom';
+  provider: 'gemini' | 'custom' | 'runpod';
   customBaseUrl: string; // e.g., https://openrouter.ai/api/v1
   customApiKey?: string;
   customModelName: string; // e.g., midnight-miqu-70b
+
+  // New: Specialized RunPod Settings
+  runpodBaseUrl?: string;
+  runpodApiKey?: string;
+  runpodModelName?: string;
+
+  // New: Generation Parameters
+  temperature?: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
 }
 
 export interface DialogueItem {

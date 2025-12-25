@@ -28,6 +28,7 @@ interface Props {
     onUpdateLora?: (charId: string, loraTag: string) => void;
     customLoraTriggers?: { [key: string]: string };
     onUpdateLoraTrigger?: (charId: string, trigger: string) => void;
+    onDeleteCustomCharacter?: (charId: string) => void; // 新增：刪除自定義角色
 }
 
 const LevelUpPopup = ({ oldStats, newStats, onClose }: { oldStats: CombatStats, newStats: CombatStats, onClose: () => void }) => (
@@ -63,7 +64,7 @@ const CharacterManager: React.FC<Props> = ({
     isOpen, onClose, characters, inventory, onEquipItem, onUnequipItem, customAvatars,
     userState, onUpdateUserState, onUpdateInventory, affectionMap = {}, onUpdateAffection,
     onStartSpecialStory, onUploadUltImage, ultImages = {}, customLoras, onUpdateLora,
-    customLoraTriggers, onUpdateLoraTrigger
+    customLoraTriggers, onUpdateLoraTrigger, onDeleteCustomCharacter
 }) => {
     const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'INFO' | 'GROWTH' | 'EQUIP' | 'BOND'>('INFO');
@@ -116,15 +117,44 @@ const CharacterManager: React.FC<Props> = ({
         effectRes: finalStatsWithoutEquip.effectRes || 0
     };
 
+    // 計算升級所需經驗的輔助函數
+    const calculateRequiredExp = (level: number): number => {
+        const baseExp = 100;
+        return Math.floor(baseExp * Math.pow(level, 1.5));
+    };
+
     const handleLevelUp = () => {
         if (progression.level >= currentLevelCap) return alert("需突破才能繼續升級");
         const expBooks = inventory.find(i => i.id === 'exp_book_purple');
         if (!expBooks || expBooks.count < 1) return alert("經驗書不足 (需 漫遊指南)");
 
         const oldStats = { ...viewStats };
+        const expGained = 200; // 紫色經驗書提供 200 經驗
+
+        // 計算新的經驗值
+        let newExp = (progression.exp || 0) + expGained;
+        let newLevel = progression.level;
+        let newMaxExp = progression.maxExp || calculateRequiredExp(progression.level);
+
+        // 檢查是否可以升級（可能連續升多級）
+        while (newExp >= newMaxExp && newLevel < currentLevelCap) {
+            newExp -= newMaxExp;
+            newLevel += 1;
+            newMaxExp = calculateRequiredExp(newLevel);
+        }
+
+        // 如果達到等級上限，保留溢出經驗
+        if (newLevel >= currentLevelCap) {
+            newExp = Math.min(newExp, newMaxExp - 1);
+        }
 
         const newInventory = inventory.map(i => i.id === 'exp_book_purple' ? { ...i, count: i.count - 1 } : i);
-        const newProgression = { ...progression, level: progression.level + 1 };
+        const newProgression = {
+            ...progression,
+            level: newLevel,
+            exp: newExp,
+            maxExp: newMaxExp
+        };
 
         onUpdateInventory(newInventory);
         onUpdateUserState({
@@ -135,18 +165,21 @@ const CharacterManager: React.FC<Props> = ({
             }
         });
 
-        const newBase = calculateStats(selectedChar, newProgression.level, newProgression.ascension, 0);
-        const newFinal = calculateFinalStats(newBase, selectedChar.id, unlockedTraces, affection);
-        const newTotal = {
-            hp: newFinal.hp + equipBonus.hp,
-            atk: newFinal.atk + equipBonus.atk,
-            def: newFinal.def + equipBonus.def,
-            spd: newFinal.spd + equipBonus.spd,
-            critRate: newFinal.critRate,
-            critDmg: newFinal.critDmg
-        };
+        // 只有實際升級時才顯示升級動畫
+        if (newLevel > progression.level) {
+            const newBase = calculateStats(selectedChar, newProgression.level, newProgression.ascension, 0);
+            const newFinal = calculateFinalStats(newBase, selectedChar.id, unlockedTraces, affection);
+            const newTotal = {
+                hp: newFinal.hp + equipBonus.hp,
+                atk: newFinal.atk + equipBonus.atk,
+                def: newFinal.def + equipBonus.def,
+                spd: newFinal.spd + equipBonus.spd,
+                critRate: newFinal.critRate,
+                critDmg: newFinal.critDmg
+            };
 
-        setLevelUpData({ old: oldStats, new: newTotal });
+            setLevelUpData({ old: oldStats, new: newTotal });
+        }
     };
 
     const handleQuickEquip = () => {
@@ -175,6 +208,64 @@ const CharacterManager: React.FC<Props> = ({
         if (updates.length === 0) return alert("沒有更合適的裝備");
         updates.forEach(u => onEquipItem(selectedChar.id, u.id, u.slot));
         alert(`已快速裝備 ${updates.length} 件物品`);
+    };
+
+    const handleAscension = () => {
+        // 檢查是否達到等級上限
+        if (progression.level < currentLevelCap) {
+            return alert(`需要達到等級 ${currentLevelCap} 才能突破`);
+        }
+
+        // 檢查是否已達最高突破階級
+        if (progression.ascension >= 6) {
+            return alert("已達最高突破階級");
+        }
+
+        // 定義突破材料需求
+        const ascensionMaterials: Record<number, { itemId: string, count: number, credits: number }> = {
+            0: { itemId: 'aether_dust', count: 3, credits: 20000 },
+            1: { itemId: 'aether_dust', count: 6, credits: 40000 },
+            2: { itemId: 'ice_crystal', count: 3, credits: 60000 },
+            3: { itemId: 'ice_crystal', count: 6, credits: 80000 },
+            4: { itemId: 'thunder_prism', count: 3, credits: 100000 },
+            5: { itemId: 'thunder_prism', count: 6, credits: 120000 }
+        };
+
+        const requirement = ascensionMaterials[progression.ascension];
+        if (!requirement) return alert("突破數據錯誤");
+
+        // 檢查材料
+        const material = inventory.find(i => i.id === requirement.itemId);
+        if (!material || material.count < requirement.count) {
+            return alert(`材料不足！需要 ${requirement.count} 個突破材料`);
+        }
+
+        // 檢查金幣（從 userState 或 credits prop 中扣除，這裡假設有 credits）
+        // 注意：您可能需要從 props 傳入 credits 和 onUpdateCredits
+
+        // 消耗材料
+        const newInventory = inventory.map(i =>
+            i.id === requirement.itemId ? { ...i, count: i.count - requirement.count } : i
+        );
+
+        // 提升突破階級
+        const newAscension = progression.ascension + 1;
+        const newLevelCap = 20 + (newAscension * 20);
+        const newProgression = {
+            ...progression,
+            ascension: newAscension
+        };
+
+        onUpdateInventory(newInventory);
+        onUpdateUserState({
+            ...userState,
+            characterProgression: {
+                ...userState.characterProgression,
+                [selectedChar.id]: newProgression
+            }
+        });
+
+        alert(`突破成功！等級上限提升至 ${newLevelCap}`);
     };
 
     const handleUnlockTrace = (node: TraceNode) => {
@@ -225,6 +316,7 @@ const CharacterManager: React.FC<Props> = ({
                             const data = getCharData(char.id, char.name);
                             const isGenshin = char.game === 'Genshin Impact';
                             const roleText = isGenshin ? ELEMENT_MAP_CN[data.element] : PATH_MAP_CN[data.path];
+                            const isCustomChar = char.game === 'Custom'; // 判斷是否為自定義角色
 
                             // Rarity colors
                             const isSSR = char.rarity === 5;
@@ -232,16 +324,40 @@ const CharacterManager: React.FC<Props> = ({
                             // const textColor = isSSR ? 'text-yellow-500' : char.rarity === 4 ? 'text-purple-400' : 'text-blue-400';
 
                             return (
-                                <div key={char.id} onClick={() => setSelectedCharId(char.id)} className={`group cursor-pointer flex items-center gap-3 p-2 rounded-r-full transition-all ${selectedChar.id === char.id ? 'bg-gradient-to-r from-pink-600/80 to-transparent pl-4 border-l-4 border-pink-400' : 'hover:bg-white/5'}`}>
-                                    <div className={`w-12 h-12 rounded-full border-2 overflow-hidden shrink-0 ${selectedChar.id === char.id ? `${borderColor} scale-110` : `${borderColor} grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100`}`}>
-                                        <img src={customAvatars[char.id] || char.avatarUrl} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-center">
-                                            <div className={`font-bold text-sm truncate ${selectedChar.id === char.id ? 'text-white' : 'text-gray-400'}`}>{char.name}</div>
+                                <div key={char.id} className={`group cursor-pointer flex items-center gap-3 p-2 rounded-r-full transition-all relative ${selectedChar.id === char.id ? 'bg-gradient-to-r from-pink-600/80 to-transparent pl-4 border-l-4 border-pink-400' : 'hover:bg-white/5'}`}>
+                                    <div onClick={() => setSelectedCharId(char.id)} className="flex items-center gap-3 flex-1">
+                                        <div className={`w-12 h-12 rounded-full border-2 overflow-hidden shrink-0 ${selectedChar.id === char.id ? `${borderColor} scale-110` : `${borderColor} grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100`}`}>
+                                            <img src={customAvatars[char.id] || char.avatarUrl} className="w-full h-full object-cover object-top" />
                                         </div>
-                                        <div className="text-[10px] text-gray-500 uppercase truncate">{roleText || data.path}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-center">
+                                                <div className={`font-bold text-sm truncate ${selectedChar.id === char.id ? 'text-white' : 'text-gray-400'}`}>{char.name}</div>
+                                            </div>
+                                            <div className="text-[10px] text-gray-500 uppercase truncate">{roleText || data.path}</div>
+                                        </div>
                                     </div>
+                                    {/* 刪除按鈕（僅限自定義角色） */}
+                                    {isCustomChar && onDeleteCustomCharacter && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm(`確定要刪除自定義角色「${char.name}」嗎？此操作無法復原！`)) {
+                                                    onDeleteCustomCharacter(char.id);
+                                                    // 如果刪除的是當前選中的角色，切換到第一個角色
+                                                    if (selectedChar.id === char.id && characters.length > 1) {
+                                                        const nextChar = characters.find(c => c.id !== char.id);
+                                                        if (nextChar) setSelectedCharId(nextChar.id);
+                                                    }
+                                                }
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-500/20 rounded-full"
+                                            title="刪除自定義角色"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
                             );
                         })}
@@ -387,6 +503,7 @@ const CharacterManager: React.FC<Props> = ({
                                 traces={traces}
                                 unlockedTraces={unlockedTraces}
                                 onLevelUp={handleLevelUp}
+                                onAscension={handleAscension}
                                 onUnlockTrace={handleUnlockTrace}
                             />
                         )}

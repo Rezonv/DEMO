@@ -16,22 +16,31 @@ export const DAILY_STAGES: DailyStage[] = [
     difficulties: [
       {
         level: 1, recLevel: 10, staminaCost: 10,
-        rewards: [{ itemId: 'exp_book_blue', chance: 1.0, min: 2, max: 3 }],
+        rewards: [{ itemId: 'exp_book_blue', chance: 1.0, min: 3, max: 5 }],
         enemies: [ENEMIES[0], ENEMIES[0]]
       },
       {
         level: 2, recLevel: 30, staminaCost: 20,
-        rewards: [{ itemId: 'exp_book_blue', chance: 1.0, min: 5, max: 8 }, { itemId: 'exp_book_purple', chance: 0.3, min: 1, max: 1 }],
+        rewards: [
+          { itemId: 'exp_book_blue', chance: 1.0, min: 6, max: 10 },
+          { itemId: 'exp_book_purple', chance: 0.6, min: 1, max: 2 }
+        ],
         enemies: [ENEMIES[1], ENEMIES[1]]
       },
       {
         level: 3, recLevel: 50, staminaCost: 30,
-        rewards: [{ itemId: 'exp_book_purple', chance: 1.0, min: 2, max: 3 }, { itemId: 'exp_book_blue', chance: 1.0, min: 5, max: 5 }],
+        rewards: [
+          { itemId: 'exp_book_purple', chance: 1.0, min: 3, max: 5 },
+          { itemId: 'exp_book_blue', chance: 1.0, min: 5, max: 8 }
+        ],
         enemies: [ENEMIES[2], ENEMIES[0]]
       },
       {
         level: 4, recLevel: 70, staminaCost: 40,
-        rewards: [{ itemId: 'exp_book_purple', chance: 1.0, min: 5, max: 8 }],
+        rewards: [
+          { itemId: 'exp_book_purple', chance: 1.0, min: 6, max: 10 },
+          { itemId: 'aether_dust', chance: 0.3, min: 1, max: 2 }
+        ],
         enemies: [ENEMIES[2], ENEMIES[2]]
       }
     ]
@@ -46,17 +55,25 @@ export const DAILY_STAGES: DailyStage[] = [
     difficulties: [
       {
         level: 1, recLevel: 20, staminaCost: 20,
-        rewards: [{ itemId: 'ascension_badge', chance: 1.0, min: 1, max: 1 }],
+        rewards: [
+          { itemId: 'aether_dust', chance: 1.0, min: 2, max: 3 }
+        ],
         enemies: [ENEMIES[1], ENEMIES[0]]
       },
       {
         level: 2, recLevel: 40, staminaCost: 30,
-        rewards: [{ itemId: 'ascension_badge', chance: 1.0, min: 2, max: 3 }],
+        rewards: [
+          { itemId: 'aether_dust', chance: 1.0, min: 3, max: 5 },
+          { itemId: 'ice_crystal', chance: 0.5, min: 1, max: 2 }
+        ],
         enemies: [ENEMIES[1], ENEMIES[2]]
       },
       {
         level: 3, recLevel: 60, staminaCost: 40,
-        rewards: [{ itemId: 'ascension_badge', chance: 1.0, min: 3, max: 5 }],
+        rewards: [
+          { itemId: 'ice_crystal', chance: 1.0, min: 3, max: 5 },
+          { itemId: 'thunder_prism', chance: 0.4, min: 1, max: 2 }
+        ],
         enemies: [ENEMIES[2], ENEMIES[2]]
       }
     ]

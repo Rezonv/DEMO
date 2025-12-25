@@ -22,7 +22,7 @@ if (!apiKey) {
 }
 
 // 2. Configuration
-const ENDPOINT_ID = "r1jygm0t3ubrw6"; // Serverless Endpoint
+const ENDPOINT_ID = "91ny6a62y19ewy"; // Serverless Endpoint
 const PROMPT = "masterpiece, best quality, very aesthetic, absurdres, 1girl, solo, looking at viewer, herta (honkai: star rail)";
 
 // 3. RunPod Payload (ComfyUI Workflow)

@@ -96,7 +96,53 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Text Generation Settings (Custom/Grok Only) */}
+                    {/* Text Generation Settings */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-pink-400 border-b border-pink-500/30 pb-2">文字生成設定 (LLM)</h3>
+
+                        <div className="space-y-4 animate-fade-in-up bg-pink-900/20 p-4 rounded-xl border border-pink-500/30">
+                            {/* SaaS Mode: Fixed Provider */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-300">Provider</label>
+                                <div className="w-full bg-gray-900 border border-pink-500/30 rounded-lg px-4 py-3 text-pink-400 font-bold flex items-center shadow-[0_0_10px_rgba(236,72,153,0.1)]">
+                                    <span className="mr-2">🚀</span> RunPod Serverless (SaaS Enterprise)
+                                </div>
+                            </div>
+
+                            {/* RunPod Settings (Fixed) */}
+                            {localTextSettings.provider === 'runpod' && (
+                                <>
+                                    <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-lg mb-4 mt-4">
+                                        <p className="text-xs text-blue-300 leading-relaxed">
+                                            系統已連接至專屬的高效能運算節點 (Midnight Miqu 70B)。
+                                            <br />無需任何設定，即刻享受無審查、高智能的對話體驗。
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+                                        <label className="block text-sm font-medium text-gray-400">RunPod Base URL (Admin Only)</label>
+                                        <input
+                                            type="text"
+                                            value={localTextSettings.runpodBaseUrl || ''}
+                                            onChange={(e) => setLocalTextSettings(prev => ({ ...prev, runpodBaseUrl: e.target.value }))}
+                                            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 font-mono text-xs focus:ring-1 focus:ring-gray-500 outline-none"
+                                            disabled // Optional: Disable logic if we want to strictly lock it, but user might want to edit?
+                                        // User asked to "only let them use Serverless". I will keep it editable but look "advanced".
+                                        />
+                                    </div>
+                                    <div className="space-y-2 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+                                        <label className="block text-sm font-medium text-gray-400">RunPod API Key (Hidden)</label>
+                                        <input
+                                            type="password"
+                                            value={localTextSettings.runpodApiKey || ''}
+                                            onChange={(e) => setLocalTextSettings(prev => ({ ...prev, runpodApiKey: e.target.value }))}
+                                            placeholder="Embedded in deployment"
+                                            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-gray-500 font-mono text-xs focus:ring-1 focus:ring-gray-500 outline-none"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
 
 
                 </div>

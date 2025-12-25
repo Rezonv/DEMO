@@ -12,6 +12,7 @@ interface Props {
     traces: TraceNode[];
     unlockedTraces: string[];
     onLevelUp: () => void;
+    onAscension: () => void;  // 新增
     onUnlockTrace: (node: TraceNode) => void;
 }
 
@@ -42,7 +43,7 @@ const getIcon = (iconName: string | undefined, type: string) => {
 };
 
 const CharacterGrowthPanel: React.FC<Props> = ({
-    progression, maxLevel, traces, unlockedTraces, onLevelUp, onUnlockTrace
+    progression, maxLevel, traces, unlockedTraces, onLevelUp, onAscension, onUnlockTrace
 }) => {
     return (
         <div className="space-y-8 animate-fade-in-right h-full flex flex-col">
@@ -51,7 +52,7 @@ const CharacterGrowthPanel: React.FC<Props> = ({
                 {/* Decorative Background */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[var(--ak-accent-yellow)]/10 to-transparent rounded-bl-full pointer-events-none"></div>
 
-                <div className="flex justify-between mb-4 relative z-10">
+                <div className="flex justify-between mb-2 relative z-10">
                     <div className="flex items-center gap-3">
                         <div className="w-1 h-6 bg-[var(--ak-accent-yellow)] shadow-[0_0_10px_var(--ak-accent-yellow)]"></div>
                         <span className="text-lg font-black italic text-white tracking-wider">等級提升 LEVEL UP</span>
@@ -59,21 +60,38 @@ const CharacterGrowthPanel: React.FC<Props> = ({
                     <span className="text-sm font-mono text-[var(--ak-accent-yellow)]">{progression.level} <span className="text-gray-500">/</span> {maxLevel}</span>
                 </div>
 
-                <div className="flex gap-6 items-center relative z-10">
-                    <div className="flex-1 h-3 bg-gray-800 rounded-sm overflow-hidden border border-gray-700 relative">
-                        {/* Progress Bar Pattern */}
-                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, #000 5px, #000 10px)' }}></div>
-                        <div className="h-full bg-[var(--ak-accent-yellow)] w-full shadow-[0_0_15px_rgba(234,179,8,0.5)] relative">
+                {/* EXP Progress Bar */}
+                <div className="mb-4 relative z-10">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>經驗值 EXP</span>
+                        <span className="font-mono">{progression.exp || 0} / {progression.maxExp || 100}</span>
+                    </div>
+                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden border border-gray-700 relative">
+                        <div
+                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_10px_rgba(6,182,212,0.5)] transition-all duration-500"
+                            style={{ width: `${Math.min(100, ((progression.exp || 0) / (progression.maxExp || 100)) * 100)}%` }}
+                        >
                             <div className="absolute top-0 right-0 h-full w-1 bg-white/50 animate-pulse"></div>
                         </div>
                     </div>
+                </div>
+
+                <div className="flex gap-3 items-center relative z-10">
                     <button
                         onClick={onLevelUp}
-                        className="bg-[var(--ak-accent-yellow)] hover:bg-yellow-400 text-black px-6 py-2 rounded-sm text-sm font-black italic tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] active:scale-95 transition-all clip-path-polygon"
+                        className="flex-1 bg-[var(--ak-accent-yellow)] hover:bg-yellow-400 text-black px-6 py-3 rounded-sm text-sm font-black italic tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] active:scale-95 transition-all clip-path-polygon"
                         style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
                     >
-                        UPGRADE
+                        使用經驗書 (+200 EXP)
                     </button>
+                    {progression.level >= maxLevel && progression.ascension < 6 && (
+                        <button
+                            onClick={onAscension}
+                            className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white rounded-sm text-sm font-black italic tracking-widest shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:shadow-[0_0_25px_rgba(220,38,38,0.6)] active:scale-95 transition-all animate-pulse"
+                        >
+                            突破 ⬆
+                        </button>
+                    )}
                 </div>
 
                 <div className="mt-4 flex items-center gap-3 text-xs text-gray-400 relative z-10">

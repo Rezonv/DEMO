@@ -17,7 +17,7 @@ export const CHARS_HSR_XIANZHOU: Character[] = [
     portraitUrl: '/characters/hsr/feixiao/portrait.png',
     defaultRole: '天擊將軍',
     passiveSkill: { name: '神速進軍', description: '以雷霆之勢行軍，探險時間減少 15%。', effectType: 'reduce_time', value: 0.15 },
-    loraTrigger: 'feixiao_(honkai:_star_rail), white_hair, fox_ears, military_uniform, ponytail'
+    loraTrigger: 'feixiao (honkai: star rail), white hair, fox ears, military uniform, ponytail, axe'
   },
   {
     id: 'lingsha',

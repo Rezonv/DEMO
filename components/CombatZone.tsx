@@ -9,6 +9,7 @@ import { NarrativeService } from '../services/narrativeService';
 import { getAllMapImagesFromDB, getAllEnemyImagesFromDB, getAllRegionImagesFromDB } from '../services/dbService';
 import { calculateStats } from '../data/combatData';
 import { calculateFinalStats } from '../data/DataManager';
+import { APP_CONFIG } from '../appConfig';
 import { calculateMVP, calculateDrops, MvpResult } from '../utils/combatLogic';
 import BattleEngine, { CombatMetrics } from './BattleEngine';
 import MapOverlay from './MapOverlay';
@@ -262,13 +263,19 @@ const CombatZone: React.FC<Props> = ({ characters, customAvatars, userState, onB
             };
         });
 
-        const enemies: CombatUnit[] = (enemiesData as any[]).map((e, i) => ({
-            uid: `enemy_${i}`, charId: e.id || e.charId, name: e.name, isEnemy: true,
-            level: e.level, maxHp: e.hp || e.maxHp, currentHp: e.hp || e.currentHp,
-            maxToughness: 100, currentToughness: 100, maxEnergy: 0, currentEnergy: 0,
-            stats: e.stats || { hp: e.hp, atk: e.atk, def: e.def, spd: e.spd }, element: e.element,
-            av: 10000 / e.spd, isDead: false, avatarUrl: enemyImages[e.id] || '', statuses: [], shield: 0, animState: 'idle', weaknesses: e.weaknesses
-        }));
+        const enemies: CombatUnit[] = (enemiesData as any[]).map((e, i) => {
+            // 恢復正常難度，不再削弱敵方
+            const hp = e.hp || e.maxHp;
+            const atk = e.stats?.atk || e.atk;
+
+            return {
+                uid: `enemy_${i}`, charId: e.id || e.charId, name: e.name, isEnemy: true,
+                level: e.level, maxHp: hp, currentHp: hp,
+                maxToughness: 100, currentToughness: 100, maxEnergy: 0, currentEnergy: 0,
+                stats: { ...(e.stats || { hp: e.hp, atk: e.atk, def: e.def, spd: e.spd }), hp, atk }, element: e.element,
+                av: 10000 / e.spd, isDead: false, avatarUrl: enemyImages[e.id] || '', statuses: [], shield: 0, animState: 'idle', weaknesses: e.weaknesses
+            };
+        });
 
         setBattleAllies(allies);
         setBattleEnemies(enemies);

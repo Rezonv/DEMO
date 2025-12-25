@@ -26,12 +26,16 @@ const DreamHomeChat: React.FC<Props> = ({
 
   // Scroll to bottom of chat
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTo({
-        top: chatScrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
-    }
+    const scrollToBottom = () => {
+      if (chatScrollRef.current) {
+        chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
+    };
+    // Use a small timeout and requestAnimationFrame to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(scrollToBottom);
+    }, 100);
+    return () => clearTimeout(timeoutId);
   }, [history, activeChar?.id, isGenerating]);
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -190,7 +194,7 @@ const DreamHomeChat: React.FC<Props> = ({
               🎨 生成插圖
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
-              需要更高權限的帳號才能使用
+              消耗積分與能量來生成寫真
             </div>
           </div>
         </div>
