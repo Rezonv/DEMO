@@ -1,6 +1,10 @@
 {
     "rewrites": [
         {
+            "source": "/runpod-proxy/(.*)",
+            "destination": "https://api.runpod.ai/v2/nu12bv9gmixm0v/$1"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
