@@ -29,6 +29,7 @@ import { EXPEDITION_MAPS } from './data/expeditions';
 import { SHOP_ITEMS } from './data/items';
 import { CHARACTERS } from './data/characters';
 import ReactPlayer from 'react-player';
+import { Analytics } from '@vercel/analytics/react';
 
 const uuid = () => Math.random().toString(36).substring(2, 15);
 
@@ -533,6 +534,7 @@ const App = () => {
     return (
         <GameProvider>
             <AppContent />
+            <Analytics />
         </GameProvider>
     );
 };
